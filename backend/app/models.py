@@ -24,6 +24,40 @@ class ExpenseUpdate(BaseModel):
     date: Optional[str] = None
 
 
+# Income Models
+INCOME_SOURCES = [
+    "Part-time Job",
+    "Freelance",
+    "Allowance",
+    "Venmo/Zelle",
+    "Scholarship",
+    "Refund",
+    "Gift",
+    "Other"
+]
+
+
+class IncomeCreate(BaseModel):
+    raw_input: str
+
+
+class Income(BaseModel):
+    id: str
+    raw_input: str
+    description: str
+    amount: float
+    source: str
+    date: str
+    created_at: str
+
+
+class IncomeUpdate(BaseModel):
+    description: Optional[str] = None
+    amount: Optional[float] = None
+    source: Optional[str] = None
+    date: Optional[str] = None
+
+
 class AnalyticsResponse(BaseModel):
     month: str
     total_spent: float

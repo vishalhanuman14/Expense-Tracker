@@ -156,13 +156,148 @@ def get_expenses_by_month(year: int, month: int) -> List[dict]:
 
 
 def get_all_months() -> List[str]:
-    """Get all unique months that have expenses."""
+    """Get all unique months that have expenses or income."""
     expenses = load_expenses()
+    incomes = load_incomes()
     months = set()
+    
     for expense in expenses:
         try:
             date = datetime.fromisoformat(expense["date"])
             months.add(f"{date.year}-{date.month:02d}")
         except (ValueError, KeyError):
             continue
+    
+    for income in incomes:
+        try:
+            date = datetime.fromisoformat(income["date"])
+            months.add(f"{date.year}-{date.month:02d}")
+        except (ValueError, KeyError):
+            continue
+    
     return sorted(list(months), reverse=True)
+
+
+# ============ Income Functions ============
+
+INCOME_DATA_FILE = os.path.join(os.path.dirname(__file__), "..", "data", "income.json")
+
+
+def _load_income_json() -> List[dict]:
+    """Load income from local JSON file."""
+    data_dir = os.path.dirname(INCOME_DATA_FILE)
+    if not os.path.exists(data_dir):
+        os.makedirs(data_dir)
+    if not os.path.exists(INCOME_DATA_FILE):
+        with open(INCOME_DATA_FILE, "w") as f:
+            json.dump([], f)
+    try:
+        with open(INCOME_DATA_FILE, "r") as f:
+            return json.load(f)
+    except (json.JSONDecodeError, FileNotFoundError):
+        return []
+
+
+def _save_income_json(incomes: List[dict]):
+    """Save income to local JSON file."""
+    data_dir = os.path.dirname(INCOME_DATA_FILE)
+    if not os.path.exists(data_dir):
+        os.makedirs(data_dir)
+    with open(INCOME_DATA_FILE, "w") as f:
+        json.dump(incomes, f, indent=2)
+
+
+def load_incomes() -> List[dict]:
+    """Load all income entries."""
+    if USE_SUPABASE:
+        response = supabase.table("income").select("*").order("date", desc=True).execute()
+        return response.data or []
+    else:
+        return _load_income_json()
+
+
+def add_income(income_data: dict) -> dict:
+    """Add a new income entry."""
+    income = {
+        "id": str(uuid.uuid4()),
+        "created_at": datetime.now().isoformat(),
+        **income_data
+    }
+    
+    if USE_SUPABASE:
+        response = supabase.table("income").insert(income).execute()
+        return response.data[0] if response.data else income
+    else:
+        incomes = _load_income_json()
+        incomes.append(income)
+        _save_income_json(incomes)
+        return income
+
+
+def get_income(income_id: str) -> Optional[dict]:
+    """Get a single income entry by ID."""
+    if USE_SUPABASE:
+        response = supabase.table("income").select("*").eq("id", income_id).execute()
+        return response.data[0] if response.data else None
+    else:
+        incomes = _load_income_json()
+        for income in incomes:
+            if income["id"] == income_id:
+                return income
+        return None
+
+
+def update_income(income_id: str, update_data: dict) -> Optional[dict]:
+    """Update an income entry."""
+    clean_data = {k: v for k, v in update_data.items() if v is not None}
+    
+    if USE_SUPABASE:
+        response = supabase.table("income").update(clean_data).eq("id", income_id).execute()
+        return response.data[0] if response.data else None
+    else:
+        incomes = _load_income_json()
+        for i, income in enumerate(incomes):
+            if income["id"] == income_id:
+                incomes[i] = {**income, **clean_data}
+                _save_income_json(incomes)
+                return incomes[i]
+        return None
+
+
+def delete_income(income_id: str) -> bool:
+    """Delete an income entry."""
+    if USE_SUPABASE:
+        response = supabase.table("income").delete().eq("id", income_id).execute()
+        return bool(response.data)
+    else:
+        incomes = _load_income_json()
+        initial_len = len(incomes)
+        incomes = [i for i in incomes if i["id"] != income_id]
+        if len(incomes) < initial_len:
+            _save_income_json(incomes)
+            return True
+        return False
+
+
+def get_income_by_month(year: int, month: int) -> List[dict]:
+    """Get income for a specific month."""
+    if USE_SUPABASE:
+        start_date = f"{year}-{month:02d}-01"
+        if month == 12:
+            end_date = f"{year + 1}-01-01"
+        else:
+            end_date = f"{year}-{month + 1:02d}-01"
+        
+        response = supabase.table("income").select("*").gte("date", start_date).lt("date", end_date).execute()
+        return response.data or []
+    else:
+        incomes = _load_income_json()
+        filtered = []
+        for income in incomes:
+            try:
+                date = datetime.fromisoformat(income["date"])
+                if date.year == year and date.month == month:
+                    filtered.append(income)
+            except (ValueError, KeyError):
+                continue
+        return filtered

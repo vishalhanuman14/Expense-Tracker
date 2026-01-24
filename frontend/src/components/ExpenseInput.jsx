@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import './ExpenseInput.css'
 
-function ExpenseInput({ onAdd, isLoading }) {
+function ExpenseInput({ onAdd, isLoading, placeholder, isIncome = false }) {
   const [input, setInput] = useState('')
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
@@ -18,24 +18,37 @@ function ExpenseInput({ onAdd, isLoading }) {
     
     if (result.success) {
       setInput('')
-      setSuccess(`Added: ${result.expense.description} - $${result.expense.amount} (${result.expense.category})`)
+      if (isIncome) {
+        setSuccess(`Added: ${result.income.description} - $${result.income.amount} (${result.income.source})`)
+      } else {
+        setSuccess(`Added: ${result.expense.description} - $${result.expense.amount} (${result.expense.category})`)
+      }
       setTimeout(() => setSuccess(''), 4000)
     } else {
       setError(result.error)
     }
   }
 
-  const examples = [
+  const expenseExamples = [
     'rent $850',
     'uber to campus $8',
     'chipotle $14',
     'beer at bar $25',
   ]
 
+  const incomeExamples = [
+    'paycheck $250',
+    'venmo from roommate $40',
+    'freelance project $150',
+    'allowance $100',
+  ]
+
+  const examples = isIncome ? incomeExamples : expenseExamples
+
   return (
-    <div className="expense-input-container">
+    <div className={`expense-input-container ${isIncome ? 'income-mode' : ''}`}>
       <div className="input-header">
-        <h2>Add Expense</h2>
+        <h2>{isIncome ? 'Add Income' : 'Add Expense'}</h2>
         <p className="input-hint">
           Just type naturally — AI will categorize it for you
         </p>
@@ -47,13 +60,13 @@ function ExpenseInput({ onAdd, isLoading }) {
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="e.g., coffee at starbucks $6.50"
-            className="expense-input"
+            placeholder={placeholder || (isIncome ? "e.g., paycheck from work $250" : "e.g., coffee at starbucks $6.50")}
+            className={`expense-input ${isIncome ? 'income-input' : ''}`}
             disabled={isLoading}
           />
           <button 
             type="submit" 
-            className="submit-btn"
+            className={`submit-btn ${isIncome ? 'income-btn' : ''}`}
             disabled={isLoading || !input.trim()}
           >
             {isLoading ? (
@@ -79,7 +92,7 @@ function ExpenseInput({ onAdd, isLoading }) {
 
       {success && (
         <motion.div 
-          className="message success"
+          className={`message success ${isIncome ? 'income-success' : ''}`}
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
         >
@@ -92,7 +105,7 @@ function ExpenseInput({ onAdd, isLoading }) {
         {examples.map((example, i) => (
           <button
             key={i}
-            className="example-btn"
+            className={`example-btn ${isIncome ? 'income-example' : ''}`}
             onClick={() => setInput(example)}
             disabled={isLoading}
           >

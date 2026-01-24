@@ -6,12 +6,14 @@ from collections import defaultdict
 from dotenv import load_dotenv
 from typing import Optional
 
-from .models import ExpenseCreate, Expense, ExpenseUpdate, AnalyticsResponse
+from .models import ExpenseCreate, Expense, ExpenseUpdate, IncomeCreate, IncomeUpdate, AnalyticsResponse
 from .database import (
     load_expenses, add_expense, get_expense, update_expense, 
-    delete_expense, get_expenses_by_month, get_all_months
+    delete_expense, get_expenses_by_month, get_all_months,
+    load_incomes, add_income, get_income, update_income,
+    delete_income, get_income_by_month
 )
-from .llm import parse_expense_with_llm, get_categories
+from .llm import parse_expense_with_llm, get_categories, parse_income_with_llm, get_income_sources
 
 # Load environment variables from .env file
 load_dotenv()
@@ -136,27 +138,113 @@ async def delete_single_expense(expense_id: str, authorized: bool = Depends(veri
     raise HTTPException(status_code=404, detail="Expense not found")
 
 
+# ============ Income Endpoints ============
+
+@app.get("/income/sources")
+async def list_income_sources():
+    """Get all available income sources."""
+    return {"sources": get_income_sources()}
+
+
+@app.post("/income")
+async def create_income(income: IncomeCreate, authorized: bool = Depends(verify_auth)):
+    """Create a new income entry from raw input, using LLM to parse."""
+    api_key = os.getenv("OPENAI_API_KEY")
+    
+    if not api_key:
+        raise HTTPException(
+            status_code=400, 
+            detail="OPENAI_API_KEY environment variable is not set."
+        )
+    
+    try:
+        parsed = parse_income_with_llm(income.raw_input, api_key)
+        
+        income_data = {
+            "raw_input": income.raw_input,
+            **parsed
+        }
+        saved = add_income(income_data)
+        
+        return {"success": True, "income": saved}
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/income")
+async def list_income(year: int = None, month: int = None):
+    """Get all income entries, optionally filtered by month."""
+    if year and month:
+        incomes = get_income_by_month(year, month)
+    else:
+        incomes = load_incomes()
+    
+    incomes.sort(key=lambda x: x.get("date", ""), reverse=True)
+    
+    return {"income": incomes}
+
+
+@app.get("/income/{income_id}")
+async def get_single_income(income_id: str):
+    """Get a single income entry by ID."""
+    income = get_income(income_id)
+    if not income:
+        raise HTTPException(status_code=404, detail="Income not found")
+    return {"income": income}
+
+
+@app.put("/income/{income_id}")
+async def update_single_income(income_id: str, update: IncomeUpdate, authorized: bool = Depends(verify_auth)):
+    """Update an income entry."""
+    updated = update_income(income_id, update.model_dump())
+    if not updated:
+        raise HTTPException(status_code=404, detail="Income not found")
+    return {"success": True, "income": updated}
+
+
+@app.delete("/income/{income_id}")
+async def delete_single_income(income_id: str, authorized: bool = Depends(verify_auth)):
+    """Delete an income entry."""
+    if delete_income(income_id):
+        return {"success": True}
+    raise HTTPException(status_code=404, detail="Income not found")
+
+
 @app.get("/analytics")
 async def get_analytics(year: int = None, month: int = None):
     """Get spending analytics for a specific month or all time."""
     if year and month:
         expenses = get_expenses_by_month(year, month)
+        incomes = get_income_by_month(year, month)
         month_label = f"{year}-{month:02d}"
     else:
         expenses = load_expenses()
+        incomes = load_incomes()
         month_label = "all"
     
-    if not expenses:
+    # Calculate income totals
+    total_income = sum(i.get("amount", 0) for i in incomes)
+    by_source = defaultdict(float)
+    for income in incomes:
+        source = income.get("source", "Other")
+        by_source[source] += income.get("amount", 0)
+    
+    if not expenses and not incomes:
         return {
             "month": month_label,
             "total_spent": 0,
+            "total_income": 0,
+            "net_balance": 0,
             "by_category": {},
+            "by_source": {},
             "daily_spending": [],
             "top_categories": [],
-            "expense_count": 0
+            "expense_count": 0,
+            "income_count": 0
         }
     
-    # Calculate totals by category
+    # Calculate expense totals by category
     by_category = defaultdict(float)
     daily_spending = defaultdict(float)
     
@@ -176,15 +264,20 @@ async def get_analytics(year: int = None, month: int = None):
     # Format daily spending for chart
     daily_list = [{"date": date, "amount": round(amt, 2)} for date, amt in sorted(daily_spending.items())]
     
-    total = sum(by_category.values())
+    total_spent = sum(by_category.values())
+    net_balance = total_income - total_spent
     
     return {
         "month": month_label,
-        "total_spent": round(total, 2),
+        "total_spent": round(total_spent, 2),
+        "total_income": round(total_income, 2),
+        "net_balance": round(net_balance, 2),
         "by_category": {k: round(v, 2) for k, v in by_category.items()},
+        "by_source": {k: round(v, 2) for k, v in by_source.items()},
         "daily_spending": daily_list,
         "top_categories": top_categories,
-        "expense_count": len(expenses)
+        "expense_count": len(expenses),
+        "income_count": len(incomes)
     }
 
 

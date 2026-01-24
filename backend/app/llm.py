@@ -99,3 +99,92 @@ Return ONLY valid JSON. Example:
 def get_categories() -> list:
     """Return the list of available categories."""
     return CATEGORIES
+
+
+# Income sources
+INCOME_SOURCES = [
+    "Part-time Job",
+    "Freelance",
+    "Allowance",
+    "Venmo/Zelle",
+    "Scholarship",
+    "Refund",
+    "Gift",
+    "Other"
+]
+
+
+def parse_income_with_llm(raw_input: str, api_key: str) -> dict:
+    """Use OpenAI to parse raw income input and categorize it."""
+    
+    client = OpenAI(api_key=api_key)
+    
+    now = datetime.now()
+    today = now.strftime("%Y-%m-%d")
+    current_year = now.year
+    current_month = now.strftime("%B")
+    
+    prompt = f"""Parse this income entry and return a JSON object.
+
+CURRENT DATE: {today} ({current_month} {now.day}, {current_year})
+
+Rules for parsing dates:
+- If a specific date is mentioned (e.g., "Jan 10th", "January 10"), use the current year {current_year}
+- "yesterday" = one day before {today}
+- "last week" = 7 days before {today}
+- If no date mentioned, use today: {today}
+- Always return date in YYYY-MM-DD format
+
+Return these fields:
+- description: Clean, properly formatted description. Fix any typos, capitalize properly
+- amount: Number only (no $ symbol)
+- source: One of: {', '.join(INCOME_SOURCES)}
+- date: YYYY-MM-DD format
+
+Raw input: "{raw_input}"
+
+Return ONLY valid JSON. Example:
+{{"description": "Paycheck from Starbucks", "amount": 250.00, "source": "Part-time Job", "date": "{current_year}-01-15"}}"""
+
+    response = client.chat.completions.create(
+        model="gpt-4.1-nano",
+        messages=[
+            {"role": "system", "content": "You are a helpful assistant that parses income inputs and categorizes them. Always return valid JSON only."},
+            {"role": "user", "content": prompt}
+        ],
+        temperature=0.1,
+        max_tokens=200
+    )
+    
+    result_text = response.choices[0].message.content.strip()
+    
+    # Clean up the response - remove markdown code blocks if present
+    if result_text.startswith("```"):
+        result_text = re.sub(r'^```(?:json)?\n?', '', result_text)
+        result_text = re.sub(r'\n?```$', '', result_text)
+    
+    try:
+        parsed = json.loads(result_text)
+        
+        return {
+            "description": str(parsed.get("description", raw_input)),
+            "amount": float(parsed.get("amount", 0)),
+            "source": parsed.get("source", "Other") if parsed.get("source") in INCOME_SOURCES else "Other",
+            "date": parsed.get("date", today)
+        }
+    except json.JSONDecodeError:
+        # Fallback: try to extract amount from raw input
+        amount_match = re.search(r'\$?(\d+(?:\.\d{2})?)', raw_input)
+        amount = float(amount_match.group(1)) if amount_match else 0
+        
+        return {
+            "description": raw_input,
+            "amount": amount,
+            "source": "Other",
+            "date": today
+        }
+
+
+def get_income_sources() -> list:
+    """Return the list of available income sources."""
+    return INCOME_SOURCES

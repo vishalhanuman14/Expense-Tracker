@@ -1,0 +1,165 @@
+.income-list-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.income-list-empty {
+  text-align: center;
+  padding: 3rem 2rem;
+  background: var(--bg-card);
+  border: 1px dashed var(--border-light);
+  border-radius: var(--radius-xl);
+}
+
+.income-list-empty .empty-icon {
+  font-size: 2.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.income-list-empty h3 {
+  font-size: 1.1rem;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+}
+
+.income-list-empty p {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+/* Income List */
+.income-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.income-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  transition: all 0.2s ease;
+}
+
+.income-item:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--border-light);
+}
+
+.income-source-icon {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  border-radius: var(--radius-md);
+  flex-shrink: 0;
+}
+
+.income-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.income-description {
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.income-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.income-source-tag {
+  padding: 0.2rem 0.5rem;
+  font-size: 0.7rem;
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.income-date {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.income-amount {
+  font-family: var(--font-mono);
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #22c55e;
+  flex-shrink: 0;
+}
+
+/* Action Buttons */
+.income-actions {
+  display: flex;
+  gap: 0.25rem;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.income-item:hover .income-actions {
+  opacity: 1;
+}
+
+.income-actions .edit-btn,
+.income-actions .delete-btn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.income-actions .edit-btn:hover {
+  color: var(--primary);
+  background: rgba(99, 102, 241, 0.1);
+}
+
+.income-actions .delete-btn:hover {
+  color: var(--danger);
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.income-save {
+  background: #22c55e !important;
+}
+
+.income-save:hover {
+  background: #16a34a !important;
+}
+
+@media (max-width: 768px) {
+  .income-item {
+    padding: 0.875rem 1rem;
+  }
+  
+  .income-source-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 1.1rem;
+  }
+  
+  .income-actions {
+    opacity: 1;
+  }
+}

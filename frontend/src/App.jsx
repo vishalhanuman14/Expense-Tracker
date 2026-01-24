@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import ExpenseInput from './components/ExpenseInput'
 import ExpenseList from './components/ExpenseList'
+import IncomeList from './components/IncomeList'
 import Analytics from './components/Analytics'
 import ErrorPopup from './components/ErrorPopup'
 import Login from './components/Login'
@@ -9,15 +10,28 @@ import './App.css'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
+const CATEGORIES = [
+  'Rent & Housing', 'Utilities', 'Groceries', 'Food & Dining', 'Transportation',
+  'Alcohol & Bars', 'Tobacco & Vapes', 'Entertainment', 'Subscriptions',
+  'Shopping', 'Health & Fitness', 'Personal Care', 'Education', 'Travel',
+  'Gifts & Donations', 'Other'
+]
+
 function App() {
   const [expenses, setExpenses] = useState([])
+  const [income, setIncome] = useState([])
   const [analytics, setAnalytics] = useState(null)
   const [trends, setTrends] = useState([])
   const [availableMonths, setAvailableMonths] = useState([])
   const [selectedMonth, setSelectedMonth] = useState(null)
   const [activeTab, setActiveTab] = useState('expenses')
+  const [activeSubTab, setActiveSubTab] = useState('spending') // 'spending' or 'income'
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState(null)
+  
+  // Search & Filter state
+  const [searchQuery, setSearchQuery] = useState('')
+  const [categoryFilter, setCategoryFilter] = useState('')
   
   // Auth state
   const [authRequired, setAuthRequired] = useState(false)
@@ -35,11 +49,30 @@ function App() {
   useEffect(() => {
     if (!checkingAuth && (isAuthenticated || isViewOnly || !authRequired)) {
       fetchExpenses()
+      fetchIncome()
       fetchAnalytics()
       fetchTrends()
       fetchAvailableMonths()
     }
   }, [selectedMonth, isAuthenticated, isViewOnly, authRequired, checkingAuth])
+
+  // Filtered expenses based on search and category
+  const filteredExpenses = useMemo(() => {
+    return expenses.filter(expense => {
+      const matchesSearch = !searchQuery || 
+        expense.description.toLowerCase().includes(searchQuery.toLowerCase())
+      const matchesCategory = !categoryFilter || expense.category === categoryFilter
+      return matchesSearch && matchesCategory
+    })
+  }, [expenses, searchQuery, categoryFilter])
+
+  // Filtered income based on search
+  const filteredIncome = useMemo(() => {
+    return income.filter(item => {
+      return !searchQuery || 
+        item.description.toLowerCase().includes(searchQuery.toLowerCase())
+    })
+  }, [income, searchQuery])
 
   const checkAuthRequired = async () => {
     try {
@@ -47,7 +80,6 @@ function App() {
       const data = await res.json()
       setAuthRequired(data.auth_required)
       
-      // If auth required and we have stored password, verify it
       if (data.auth_required && authPassword) {
         const verifyRes = await fetch(`${API_URL}/auth/verify`, {
           method: 'POST',
@@ -109,6 +141,21 @@ function App() {
     }
   }
 
+  const fetchIncome = async () => {
+    try {
+      let url = `${API_URL}/income`
+      if (selectedMonth) {
+        const [year, month] = selectedMonth.split('-')
+        url += `?year=${year}&month=${month}`
+      }
+      const res = await fetch(url)
+      const data = await res.json()
+      setIncome(data.income || [])
+    } catch (err) {
+      console.error('Failed to fetch income:', err)
+    }
+  }
+
   const fetchAnalytics = async () => {
     try {
       let url = `${API_URL}/analytics`
@@ -144,6 +191,13 @@ function App() {
     }
   }
 
+  const refreshAllData = () => {
+    return Promise.all([
+      fetchExpenses(), fetchIncome(), fetchAnalytics(), 
+      fetchTrends(), fetchAvailableMonths()
+    ])
+  }
+
   const addExpense = async (rawInput) => {
     setIsLoading(true)
     try {
@@ -161,13 +215,38 @@ function App() {
       }
       
       const data = await res.json()
-      
-      // Refresh data
-      await Promise.all([fetchExpenses(), fetchAnalytics(), fetchTrends(), fetchAvailableMonths()])
-      
+      await refreshAllData()
       return { success: true, expense: data.expense }
     } catch (err) {
       console.error('Failed to add expense:', err)
+      setError(err.message)
+      return { success: false, error: err.message }
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const addIncome = async (rawInput) => {
+    setIsLoading(true)
+    try {
+      const res = await fetch(`${API_URL}/income`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ raw_input: rawInput })
+      })
+      
+      if (!res.ok) {
+        const errorData = await res.json()
+        const errorMessage = errorData.detail || 'Failed to add income'
+        setError(errorMessage)
+        return { success: false, error: errorMessage }
+      }
+      
+      const data = await res.json()
+      await refreshAllData()
+      return { success: true, income: data.income }
+    } catch (err) {
+      console.error('Failed to add income:', err)
       setError(err.message)
       return { success: false, error: err.message }
     } finally {
@@ -181,9 +260,21 @@ function App() {
         method: 'DELETE',
         headers: getAuthHeaders()
       })
-      await Promise.all([fetchExpenses(), fetchAnalytics(), fetchTrends()])
+      await refreshAllData()
     } catch (err) {
       console.error('Failed to delete expense:', err)
+    }
+  }
+
+  const deleteIncome = async (id) => {
+    try {
+      await fetch(`${API_URL}/income/${id}`, { 
+        method: 'DELETE',
+        headers: getAuthHeaders()
+      })
+      await refreshAllData()
+    } catch (err) {
+      console.error('Failed to delete income:', err)
     }
   }
 
@@ -201,10 +292,33 @@ function App() {
         return false
       }
       
-      await Promise.all([fetchExpenses(), fetchAnalytics(), fetchTrends()])
+      await refreshAllData()
       return true
     } catch (err) {
       console.error('Failed to update expense:', err)
+      setError(err.message)
+      return false
+    }
+  }
+
+  const updateIncome = async (id, updates) => {
+    try {
+      const res = await fetch(`${API_URL}/income/${id}`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(updates)
+      })
+      
+      if (!res.ok) {
+        const errorData = await res.json()
+        setError(errorData.detail || 'Failed to update income')
+        return false
+      }
+      
+      await refreshAllData()
+      return true
+    } catch (err) {
+      console.error('Failed to update income:', err)
       setError(err.message)
       return false
     }
@@ -224,7 +338,6 @@ function App() {
     return <Login onLogin={handleLogin} onViewOnly={handleViewOnly} />
   }
 
-  // Check if user can edit (authenticated or no auth required)
   const canEdit = isAuthenticated || !authRequired
 
   return (
@@ -240,7 +353,7 @@ function App() {
               className={`nav-btn ${activeTab === 'expenses' ? 'active' : ''}`}
               onClick={() => setActiveTab('expenses')}
             >
-              Expenses
+              Tracker
             </button>
             <button
               className={`nav-btn ${activeTab === 'analytics' ? 'active' : ''}`}
@@ -271,7 +384,53 @@ function App() {
               transition={{ duration: 0.3 }}
               className="tab-content"
             >
-              {canEdit && <ExpenseInput onAdd={addExpense} isLoading={isLoading} />}
+              {/* Balance Summary */}
+              {analytics && (
+                <div className="balance-summary">
+                  <div className="balance-card income-card">
+                    <span className="balance-label">Income</span>
+                    <span className="balance-value income">+${(analytics.total_income || 0).toLocaleString()}</span>
+                  </div>
+                  <div className="balance-card expense-card">
+                    <span className="balance-label">Expenses</span>
+                    <span className="balance-value expense">-${(analytics.total_spent || 0).toLocaleString()}</span>
+                  </div>
+                  <div className="balance-card net-card">
+                    <span className="balance-label">Net Balance</span>
+                    <span className={`balance-value ${(analytics.net_balance || 0) >= 0 ? 'positive' : 'negative'}`}>
+                      {(analytics.net_balance || 0) >= 0 ? '+' : ''}${(analytics.net_balance || 0).toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Sub-tabs for Spending/Income */}
+              <div className="sub-tabs">
+                <button
+                  className={`sub-tab ${activeSubTab === 'spending' ? 'active' : ''}`}
+                  onClick={() => setActiveSubTab('spending')}
+                >
+                  💸 Spending
+                </button>
+                <button
+                  className={`sub-tab ${activeSubTab === 'income' ? 'active income-tab' : ''}`}
+                  onClick={() => setActiveSubTab('income')}
+                >
+                  💰 Income
+                </button>
+              </div>
+
+              {canEdit && (
+                <ExpenseInput 
+                  onAdd={activeSubTab === 'spending' ? addExpense : addIncome} 
+                  isLoading={isLoading}
+                  placeholder={activeSubTab === 'spending' 
+                    ? "e.g., Starbucks coffee $5.50" 
+                    : "e.g., Paycheck from work $250"
+                  }
+                  isIncome={activeSubTab === 'income'}
+                />
+              )}
               
               {isViewOnly && (
                 <div className="view-only-banner">
@@ -279,6 +438,38 @@ function App() {
                   <button onClick={() => { setIsViewOnly(false) }}>Sign in to edit</button>
                 </div>
               )}
+
+              {/* Search & Filter Bar */}
+              <div className="filter-bar">
+                <div className="search-box">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="11" cy="11" r="8"/>
+                    <path d="M21 21l-4.35-4.35"/>
+                  </svg>
+                  <input
+                    type="text"
+                    placeholder="Search..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                  {searchQuery && (
+                    <button className="clear-search" onClick={() => setSearchQuery('')}>×</button>
+                  )}
+                </div>
+                
+                {activeSubTab === 'spending' && (
+                  <select
+                    className="category-filter"
+                    value={categoryFilter}
+                    onChange={(e) => setCategoryFilter(e.target.value)}
+                  >
+                    <option value="">All Categories</option>
+                    {CATEGORIES.map(cat => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                  </select>
+                )}
+              </div>
               
               <div className="month-filter">
                 <button
@@ -298,12 +489,20 @@ function App() {
                 ))}
               </div>
 
-              <ExpenseList 
-                expenses={expenses} 
-                onDelete={canEdit ? deleteExpense : null}
-                onEdit={canEdit ? updateExpense : null}
-                analytics={analytics}
-              />
+              {activeSubTab === 'spending' ? (
+                <ExpenseList 
+                  expenses={filteredExpenses} 
+                  onDelete={canEdit ? deleteExpense : null}
+                  onEdit={canEdit ? updateExpense : null}
+                  analytics={null}
+                />
+              ) : (
+                <IncomeList 
+                  income={filteredIncome}
+                  onDelete={canEdit ? deleteIncome : null}
+                  onEdit={canEdit ? updateIncome : null}
+                />
+              )}
             </motion.div>
           )}
 
