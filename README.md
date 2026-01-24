@@ -1,7 +1,5 @@
 # Spend - AI Expense Tracker
 
-**Made by Deva Anand** 
-
 A simple expense tracker that uses AI to automatically categorize your spending. Just type "chipotle $14" and the AI handles the rest.
 
 ---
