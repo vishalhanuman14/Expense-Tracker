@@ -1,0 +1,29 @@
+[
+  {
+    "id": "a083190d-2a14-4f4a-88e8-edade9eb340d",
+    "created_at": "2026-01-23T20:03:45.071590",
+    "raw_input": "netflix subscription $15.99",
+    "description": "Netflix subscription",
+    "amount": 15.99,
+    "category": "Subscriptions",
+    "date": "2026-01-23"
+  },
+  {
+    "id": "033d2cb4-9540-4efe-af8c-881029159376",
+    "created_at": "2026-01-23T20:05:37.651033",
+    "raw_input": "american sprit 8.46$",
+    "description": "American Spirit cigarettes",
+    "amount": 8.46,
+    "category": "Other",
+    "date": "2026-01-23"
+  },
+  {
+    "id": "a0b6e38d-d1c6-47d0-848a-ee229f06c53a",
+    "created_at": "2026-01-23T20:05:56.880968",
+    "raw_input": "JD Honey $39",
+    "description": "JD Honey",
+    "amount": 39.0,
+    "category": "Groceries",
+    "date": "2026-01-23"
+  }
+]
