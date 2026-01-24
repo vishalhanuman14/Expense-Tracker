@@ -29,18 +29,32 @@ def parse_expense_with_llm(raw_input: str, api_key: str) -> dict:
     
     client = OpenAI(api_key=api_key)
     
-    today = datetime.now().strftime("%Y-%m-%d")
+    now = datetime.now()
+    today = now.strftime("%Y-%m-%d")
+    current_year = now.year
+    current_month = now.strftime("%B")
     
-    prompt = f"""Parse this expense and return a JSON object with the following fields:
-- description: A clean description of the expense
-- amount: The amount spent (number only, no currency symbols)
-- category: One of these categories: {', '.join(CATEGORIES)}
-- date: The date in YYYY-MM-DD format. If no date is mentioned, use today's date: {today}
+    prompt = f"""Parse this expense and return a JSON object.
 
-Raw expense input: "{raw_input}"
+CURRENT DATE: {today} ({current_month} {now.day}, {current_year})
 
-Return ONLY valid JSON, no other text. Example:
-{{"description": "Popeyes chicken", "amount": 5.00, "category": "Food & Dining", "date": "2024-01-15"}}"""
+Rules for parsing dates:
+- If a specific date is mentioned (e.g., "Jan 10th", "January 10"), use the current year {current_year}
+- "yesterday" = one day before {today}
+- "last week" = 7 days before {today}
+- If no date mentioned, use today: {today}
+- Always return date in YYYY-MM-DD format
+
+Return these fields:
+- description: Clean description of the expense
+- amount: Number only (no $ symbol)
+- category: One of: {', '.join(CATEGORIES)}
+- date: YYYY-MM-DD format
+
+Raw input: "{raw_input}"
+
+Return ONLY valid JSON. Example:
+{{"description": "Rent payment", "amount": 100.00, "category": "Rent & Housing", "date": "{current_year}-01-10"}}"""
 
     response = client.chat.completions.create(
         model="gpt-4.1-nano",
