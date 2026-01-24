@@ -137,21 +137,32 @@ function ExpenseList({ expenses, onDelete, analytics }) {
 function formatDate(dateStr) {
   // Parse date string manually to avoid timezone issues
   // "2026-01-17" should display as Jan 17, not Jan 16
-  const [year, month, day] = dateStr.split('-').map(Number)
-  const date = new Date(year, month - 1, day) // month is 0-indexed
+  if (!dateStr) return 'Unknown'
+  
+  // Handle both "2026-01-17" and "2026-01-17T00:00:00" formats
+  const datePart = dateStr.split('T')[0]
+  const parts = datePart.split('-')
+  if (parts.length !== 3) return dateStr
+  
+  const year = parseInt(parts[0], 10)
+  const month = parseInt(parts[1], 10)
+  const day = parseInt(parts[2], 10)
   
   const today = new Date()
-  today.setHours(0, 0, 0, 0)
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
   
   const yesterday = new Date(today)
   yesterday.setDate(yesterday.getDate() - 1)
+  const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`
 
-  if (date.getTime() === today.getTime()) {
+  if (datePart === todayStr) {
     return 'Today'
-  } else if (date.getTime() === yesterday.getTime()) {
+  } else if (datePart === yesterdayStr) {
     return 'Yesterday'
   } else {
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    // Format as "Jan 17" without using Date object to avoid timezone issues
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    return `${monthNames[month - 1]} ${day}`
   }
 }
 
