@@ -64,3 +64,48 @@ class AnalyticsResponse(BaseModel):
     by_category: dict
     daily_spending: list
     top_categories: list
+
+
+# Budget Models
+class BudgetCreate(BaseModel):
+    category: str
+    monthly_limit: float
+
+
+class Budget(BaseModel):
+    id: str
+    category: str
+    monthly_limit: float
+    created_at: str
+
+
+class BudgetUpdate(BaseModel):
+    category: Optional[str] = None
+    monthly_limit: Optional[float] = None
+
+
+# Recurring Expense Models
+class RecurringExpenseCreate(BaseModel):
+    description: str
+    amount: float
+    category: str
+    day_of_month: int  # 1-28 to avoid month-end issues
+
+
+class RecurringExpense(BaseModel):
+    id: str
+    description: str
+    amount: float
+    category: str
+    day_of_month: int
+    is_active: bool
+    last_added: Optional[str] = None
+    created_at: str
+
+
+class RecurringExpenseUpdate(BaseModel):
+    description: Optional[str] = None
+    amount: Optional[float] = None
+    category: Optional[str] = None
+    day_of_month: Optional[int] = None
+    is_active: Optional[bool] = None

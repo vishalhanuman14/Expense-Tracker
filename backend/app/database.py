@@ -301,3 +301,259 @@ def get_income_by_month(year: int, month: int) -> List[dict]:
             except (ValueError, KeyError):
                 continue
         return filtered
+
+
+# ============ Budget Functions ============
+
+BUDGET_DATA_FILE = os.path.join(os.path.dirname(__file__), "..", "data", "budgets.json")
+
+
+def _load_budget_json() -> List[dict]:
+    """Load budgets from local JSON file."""
+    data_dir = os.path.dirname(BUDGET_DATA_FILE)
+    if not os.path.exists(data_dir):
+        os.makedirs(data_dir)
+    if not os.path.exists(BUDGET_DATA_FILE):
+        with open(BUDGET_DATA_FILE, "w") as f:
+            json.dump([], f)
+    try:
+        with open(BUDGET_DATA_FILE, "r") as f:
+            return json.load(f)
+    except (json.JSONDecodeError, FileNotFoundError):
+        return []
+
+
+def _save_budget_json(budgets: List[dict]):
+    """Save budgets to local JSON file."""
+    data_dir = os.path.dirname(BUDGET_DATA_FILE)
+    if not os.path.exists(data_dir):
+        os.makedirs(data_dir)
+    with open(BUDGET_DATA_FILE, "w") as f:
+        json.dump(budgets, f, indent=2)
+
+
+def load_budgets() -> List[dict]:
+    """Load all budgets."""
+    if USE_SUPABASE:
+        response = supabase.table("budgets").select("*").execute()
+        return response.data or []
+    else:
+        return _load_budget_json()
+
+
+def add_budget(budget_data: dict) -> dict:
+    """Add a new budget."""
+    budget = {
+        "id": str(uuid.uuid4()),
+        "created_at": datetime.now().isoformat(),
+        **budget_data
+    }
+    
+    if USE_SUPABASE:
+        response = supabase.table("budgets").insert(budget).execute()
+        return response.data[0] if response.data else budget
+    else:
+        budgets = _load_budget_json()
+        budgets.append(budget)
+        _save_budget_json(budgets)
+        return budget
+
+
+def get_budget(budget_id: str) -> Optional[dict]:
+    """Get a single budget by ID."""
+    if USE_SUPABASE:
+        response = supabase.table("budgets").select("*").eq("id", budget_id).execute()
+        return response.data[0] if response.data else None
+    else:
+        budgets = _load_budget_json()
+        for budget in budgets:
+            if budget["id"] == budget_id:
+                return budget
+        return None
+
+
+def get_budget_by_category(category: str) -> Optional[dict]:
+    """Get a budget by category."""
+    if USE_SUPABASE:
+        response = supabase.table("budgets").select("*").eq("category", category).execute()
+        return response.data[0] if response.data else None
+    else:
+        budgets = _load_budget_json()
+        for budget in budgets:
+            if budget["category"] == category:
+                return budget
+        return None
+
+
+def update_budget(budget_id: str, update_data: dict) -> Optional[dict]:
+    """Update a budget."""
+    clean_data = {k: v for k, v in update_data.items() if v is not None}
+    
+    if USE_SUPABASE:
+        response = supabase.table("budgets").update(clean_data).eq("id", budget_id).execute()
+        return response.data[0] if response.data else None
+    else:
+        budgets = _load_budget_json()
+        for i, budget in enumerate(budgets):
+            if budget["id"] == budget_id:
+                budgets[i] = {**budget, **clean_data}
+                _save_budget_json(budgets)
+                return budgets[i]
+        return None
+
+
+def delete_budget(budget_id: str) -> bool:
+    """Delete a budget."""
+    if USE_SUPABASE:
+        response = supabase.table("budgets").delete().eq("id", budget_id).execute()
+        return bool(response.data)
+    else:
+        budgets = _load_budget_json()
+        initial_len = len(budgets)
+        budgets = [b for b in budgets if b["id"] != budget_id]
+        if len(budgets) < initial_len:
+            _save_budget_json(budgets)
+            return True
+        return False
+
+
+# ============ Recurring Expense Functions ============
+
+RECURRING_DATA_FILE = os.path.join(os.path.dirname(__file__), "..", "data", "recurring.json")
+
+
+def _load_recurring_json() -> List[dict]:
+    """Load recurring expenses from local JSON file."""
+    data_dir = os.path.dirname(RECURRING_DATA_FILE)
+    if not os.path.exists(data_dir):
+        os.makedirs(data_dir)
+    if not os.path.exists(RECURRING_DATA_FILE):
+        with open(RECURRING_DATA_FILE, "w") as f:
+            json.dump([], f)
+    try:
+        with open(RECURRING_DATA_FILE, "r") as f:
+            return json.load(f)
+    except (json.JSONDecodeError, FileNotFoundError):
+        return []
+
+
+def _save_recurring_json(recurring: List[dict]):
+    """Save recurring expenses to local JSON file."""
+    data_dir = os.path.dirname(RECURRING_DATA_FILE)
+    if not os.path.exists(data_dir):
+        os.makedirs(data_dir)
+    with open(RECURRING_DATA_FILE, "w") as f:
+        json.dump(recurring, f, indent=2)
+
+
+def load_recurring_expenses() -> List[dict]:
+    """Load all recurring expenses."""
+    if USE_SUPABASE:
+        response = supabase.table("recurring_expenses").select("*").execute()
+        return response.data or []
+    else:
+        return _load_recurring_json()
+
+
+def add_recurring_expense(recurring_data: dict) -> dict:
+    """Add a new recurring expense."""
+    recurring = {
+        "id": str(uuid.uuid4()),
+        "is_active": True,
+        "last_added": None,
+        "created_at": datetime.now().isoformat(),
+        **recurring_data
+    }
+    
+    if USE_SUPABASE:
+        response = supabase.table("recurring_expenses").insert(recurring).execute()
+        return response.data[0] if response.data else recurring
+    else:
+        items = _load_recurring_json()
+        items.append(recurring)
+        _save_recurring_json(items)
+        return recurring
+
+
+def get_recurring_expense(recurring_id: str) -> Optional[dict]:
+    """Get a single recurring expense by ID."""
+    if USE_SUPABASE:
+        response = supabase.table("recurring_expenses").select("*").eq("id", recurring_id).execute()
+        return response.data[0] if response.data else None
+    else:
+        items = _load_recurring_json()
+        for item in items:
+            if item["id"] == recurring_id:
+                return item
+        return None
+
+
+def update_recurring_expense(recurring_id: str, update_data: dict) -> Optional[dict]:
+    """Update a recurring expense."""
+    clean_data = {k: v for k, v in update_data.items() if v is not None}
+    
+    if USE_SUPABASE:
+        response = supabase.table("recurring_expenses").update(clean_data).eq("id", recurring_id).execute()
+        return response.data[0] if response.data else None
+    else:
+        items = _load_recurring_json()
+        for i, item in enumerate(items):
+            if item["id"] == recurring_id:
+                items[i] = {**item, **clean_data}
+                _save_recurring_json(items)
+                return items[i]
+        return None
+
+
+def delete_recurring_expense(recurring_id: str) -> bool:
+    """Delete a recurring expense."""
+    if USE_SUPABASE:
+        response = supabase.table("recurring_expenses").delete().eq("id", recurring_id).execute()
+        return bool(response.data)
+    else:
+        items = _load_recurring_json()
+        initial_len = len(items)
+        items = [r for r in items if r["id"] != recurring_id]
+        if len(items) < initial_len:
+            _save_recurring_json(items)
+            return True
+        return False
+
+
+def process_recurring_expenses() -> List[dict]:
+    """Check and add recurring expenses for the current month."""
+    today = datetime.now()
+    current_month = f"{today.year}-{today.month:02d}"
+    added_expenses = []
+    
+    recurring_items = load_recurring_expenses()
+    
+    for item in recurring_items:
+        if not item.get("is_active", True):
+            continue
+            
+        last_added = item.get("last_added")
+        
+        # Check if already added this month
+        if last_added and last_added.startswith(current_month):
+            continue
+        
+        # Check if it's time to add (day of month has passed or is today)
+        day_of_month = item.get("day_of_month", 1)
+        if today.day >= day_of_month:
+            # Add the expense
+            expense_data = {
+                "raw_input": f"[Recurring] {item['description']}",
+                "description": item["description"],
+                "amount": item["amount"],
+                "category": item["category"],
+                "date": f"{today.year}-{today.month:02d}-{day_of_month:02d}"
+            }
+            
+            new_expense = add_expense(expense_data)
+            added_expenses.append(new_expense)
+            
+            # Update last_added
+            update_recurring_expense(item["id"], {"last_added": current_month})
+    
+    return added_expenses

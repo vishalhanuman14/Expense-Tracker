@@ -4,6 +4,8 @@ import ExpenseInput from './components/ExpenseInput'
 import ExpenseList from './components/ExpenseList'
 import IncomeList from './components/IncomeList'
 import Analytics from './components/Analytics'
+import BudgetManager from './components/BudgetManager'
+import RecurringManager from './components/RecurringManager'
 import ErrorPopup from './components/ErrorPopup'
 import Login from './components/Login'
 import './App.css'
@@ -25,9 +27,14 @@ function App() {
   const [availableMonths, setAvailableMonths] = useState([])
   const [selectedMonth, setSelectedMonth] = useState(null)
   const [activeTab, setActiveTab] = useState('expenses')
-  const [activeSubTab, setActiveSubTab] = useState('spending') // 'spending' or 'income'
+  const [activeSubTab, setActiveSubTab] = useState('spending')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState(null)
+  
+  // Budget & Recurring state
+  const [budgets, setBudgets] = useState([])
+  const [budgetStatus, setBudgetStatus] = useState([])
+  const [recurring, setRecurring] = useState([])
   
   // Search & Filter state
   const [searchQuery, setSearchQuery] = useState('')
@@ -53,6 +60,13 @@ function App() {
       fetchAnalytics()
       fetchTrends()
       fetchAvailableMonths()
+      fetchBudgets()
+      fetchBudgetStatus()
+      fetchRecurring()
+      // Process recurring expenses on load
+      if (isAuthenticated || !authRequired) {
+        processRecurring()
+      }
     }
   }, [selectedMonth, isAuthenticated, isViewOnly, authRequired, checkingAuth])
 
@@ -126,6 +140,8 @@ function App() {
     return headers
   }
 
+  // ============ Fetch Functions ============
+
   const fetchExpenses = async () => {
     try {
       let url = `${API_URL}/expenses`
@@ -191,12 +207,59 @@ function App() {
     }
   }
 
+  const fetchBudgets = async () => {
+    try {
+      const res = await fetch(`${API_URL}/budgets`)
+      const data = await res.json()
+      setBudgets(data.budgets || [])
+    } catch (err) {
+      console.error('Failed to fetch budgets:', err)
+    }
+  }
+
+  const fetchBudgetStatus = async () => {
+    try {
+      const now = new Date()
+      const year = selectedMonth ? parseInt(selectedMonth.split('-')[0]) : now.getFullYear()
+      const month = selectedMonth ? parseInt(selectedMonth.split('-')[1]) : now.getMonth() + 1
+      
+      const res = await fetch(`${API_URL}/budgets/status/${year}/${month}`)
+      const data = await res.json()
+      setBudgetStatus(data.budget_status || [])
+    } catch (err) {
+      console.error('Failed to fetch budget status:', err)
+    }
+  }
+
+  const fetchRecurring = async () => {
+    try {
+      const res = await fetch(`${API_URL}/recurring`)
+      const data = await res.json()
+      setRecurring(data.recurring || [])
+    } catch (err) {
+      console.error('Failed to fetch recurring:', err)
+    }
+  }
+
+  const processRecurring = async () => {
+    try {
+      await fetch(`${API_URL}/recurring/process`, {
+        method: 'POST',
+        headers: getAuthHeaders()
+      })
+    } catch (err) {
+      console.error('Failed to process recurring:', err)
+    }
+  }
+
   const refreshAllData = () => {
     return Promise.all([
       fetchExpenses(), fetchIncome(), fetchAnalytics(), 
-      fetchTrends(), fetchAvailableMonths()
+      fetchTrends(), fetchAvailableMonths(), fetchBudgetStatus()
     ])
   }
+
+  // ============ Expense CRUD ============
 
   const addExpense = async (rawInput) => {
     setIsLoading(true)
@@ -226,6 +289,43 @@ function App() {
     }
   }
 
+  const deleteExpense = async (id) => {
+    try {
+      await fetch(`${API_URL}/expenses/${id}`, { 
+        method: 'DELETE',
+        headers: getAuthHeaders()
+      })
+      await refreshAllData()
+    } catch (err) {
+      console.error('Failed to delete expense:', err)
+    }
+  }
+
+  const updateExpense = async (id, updates) => {
+    try {
+      const res = await fetch(`${API_URL}/expenses/${id}`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(updates)
+      })
+      
+      if (!res.ok) {
+        const errorData = await res.json()
+        setError(errorData.detail || 'Failed to update expense')
+        return false
+      }
+      
+      await refreshAllData()
+      return true
+    } catch (err) {
+      console.error('Failed to update expense:', err)
+      setError(err.message)
+      return false
+    }
+  }
+
+  // ============ Income CRUD ============
+
   const addIncome = async (rawInput) => {
     setIsLoading(true)
     try {
@@ -254,18 +354,6 @@ function App() {
     }
   }
 
-  const deleteExpense = async (id) => {
-    try {
-      await fetch(`${API_URL}/expenses/${id}`, { 
-        method: 'DELETE',
-        headers: getAuthHeaders()
-      })
-      await refreshAllData()
-    } catch (err) {
-      console.error('Failed to delete expense:', err)
-    }
-  }
-
   const deleteIncome = async (id) => {
     try {
       await fetch(`${API_URL}/income/${id}`, { 
@@ -275,29 +363,6 @@ function App() {
       await refreshAllData()
     } catch (err) {
       console.error('Failed to delete income:', err)
-    }
-  }
-
-  const updateExpense = async (id, updates) => {
-    try {
-      const res = await fetch(`${API_URL}/expenses/${id}`, {
-        method: 'PUT',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(updates)
-      })
-      
-      if (!res.ok) {
-        const errorData = await res.json()
-        setError(errorData.detail || 'Failed to update expense')
-        return false
-      }
-      
-      await refreshAllData()
-      return true
-    } catch (err) {
-      console.error('Failed to update expense:', err)
-      setError(err.message)
-      return false
     }
   }
 
@@ -324,6 +389,144 @@ function App() {
     }
   }
 
+  // ============ Budget CRUD ============
+
+  const addBudget = async (budgetData) => {
+    try {
+      const res = await fetch(`${API_URL}/budgets`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(budgetData)
+      })
+      
+      if (!res.ok) {
+        const errorData = await res.json()
+        setError(errorData.detail || 'Failed to add budget')
+        return false
+      }
+      
+      await fetchBudgets()
+      await fetchBudgetStatus()
+      return true
+    } catch (err) {
+      console.error('Failed to add budget:', err)
+      setError(err.message)
+      return false
+    }
+  }
+
+  const updateBudget = async (id, updates) => {
+    try {
+      const res = await fetch(`${API_URL}/budgets/${id}`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(updates)
+      })
+      
+      if (!res.ok) {
+        const errorData = await res.json()
+        setError(errorData.detail || 'Failed to update budget')
+        return false
+      }
+      
+      await fetchBudgets()
+      await fetchBudgetStatus()
+      return true
+    } catch (err) {
+      console.error('Failed to update budget:', err)
+      setError(err.message)
+      return false
+    }
+  }
+
+  const deleteBudget = async (id) => {
+    try {
+      await fetch(`${API_URL}/budgets/${id}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders()
+      })
+      await fetchBudgets()
+      await fetchBudgetStatus()
+    } catch (err) {
+      console.error('Failed to delete budget:', err)
+    }
+  }
+
+  // ============ Recurring CRUD ============
+
+  const addRecurring = async (recurringData) => {
+    try {
+      const res = await fetch(`${API_URL}/recurring`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(recurringData)
+      })
+      
+      if (!res.ok) {
+        const errorData = await res.json()
+        setError(errorData.detail || 'Failed to add recurring expense')
+        return false
+      }
+      
+      await fetchRecurring()
+      return true
+    } catch (err) {
+      console.error('Failed to add recurring:', err)
+      setError(err.message)
+      return false
+    }
+  }
+
+  const updateRecurring = async (id, updates) => {
+    try {
+      const res = await fetch(`${API_URL}/recurring/${id}`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(updates)
+      })
+      
+      if (!res.ok) {
+        const errorData = await res.json()
+        setError(errorData.detail || 'Failed to update recurring expense')
+        return false
+      }
+      
+      await fetchRecurring()
+      return true
+    } catch (err) {
+      console.error('Failed to update recurring:', err)
+      setError(err.message)
+      return false
+    }
+  }
+
+  const deleteRecurring = async (id) => {
+    try {
+      await fetch(`${API_URL}/recurring/${id}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders()
+      })
+      await fetchRecurring()
+    } catch (err) {
+      console.error('Failed to delete recurring:', err)
+    }
+  }
+
+  const handleProcessRecurring = async () => {
+    try {
+      const res = await fetch(`${API_URL}/recurring/process`, {
+        method: 'POST',
+        headers: getAuthHeaders()
+      })
+      const data = await res.json()
+      if (data.added_count > 0) {
+        await refreshAllData()
+      }
+    } catch (err) {
+      console.error('Failed to process recurring:', err)
+    }
+  }
+
   // Show loading while checking auth
   if (checkingAuth) {
     return (
@@ -339,6 +542,9 @@ function App() {
   }
 
   const canEdit = isAuthenticated || !authRequired
+
+  // Get budget warnings for current view
+  const budgetWarnings = budgetStatus.filter(b => b.status === 'warning' || b.status === 'exceeded')
 
   return (
     <div className="app">
@@ -360,6 +566,12 @@ function App() {
               onClick={() => setActiveTab('analytics')}
             >
               Analytics
+            </button>
+            <button
+              className={`nav-btn ${activeTab === 'settings' ? 'active' : ''}`}
+              onClick={() => setActiveTab('settings')}
+            >
+              Settings
             </button>
           </nav>
           {(isAuthenticated || isViewOnly) && authRequired && (
@@ -401,6 +613,21 @@ function App() {
                       {(analytics.net_balance || 0) >= 0 ? '+' : ''}${(analytics.net_balance || 0).toLocaleString()}
                     </span>
                   </div>
+                </div>
+              )}
+
+              {/* Budget Alerts */}
+              {budgetWarnings.length > 0 && (
+                <div className="budget-alerts">
+                  {budgetWarnings.map(b => (
+                    <div key={b.id} className={`budget-alert ${b.status}`}>
+                      <span className="alert-icon">{b.status === 'exceeded' ? '🚨' : '⚠️'}</span>
+                      <span className="alert-text">
+                        <strong>{b.category}</strong>: ${b.spent} of ${b.monthly_limit} 
+                        ({b.percentage}%)
+                      </span>
+                    </div>
+                  ))}
                 </div>
               )}
 
@@ -521,6 +748,35 @@ function App() {
                 selectedMonth={selectedMonth}
                 onMonthChange={setSelectedMonth}
                 availableMonths={availableMonths}
+              />
+            </motion.div>
+          )}
+
+          {activeTab === 'settings' && (
+            <motion.div
+              key="settings"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
+              className="tab-content settings-tab"
+            >
+              <BudgetManager
+                budgets={budgets}
+                budgetStatus={budgetStatus}
+                onAdd={addBudget}
+                onUpdate={updateBudget}
+                onDelete={deleteBudget}
+                canEdit={canEdit}
+              />
+              
+              <RecurringManager
+                recurring={recurring}
+                onAdd={addRecurring}
+                onUpdate={updateRecurring}
+                onDelete={deleteRecurring}
+                onProcess={handleProcessRecurring}
+                canEdit={canEdit}
               />
             </motion.div>
           )}

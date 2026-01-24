@@ -6,12 +6,20 @@ from collections import defaultdict
 from dotenv import load_dotenv
 from typing import Optional
 
-from .models import ExpenseCreate, Expense, ExpenseUpdate, IncomeCreate, IncomeUpdate, AnalyticsResponse
+from .models import (
+    ExpenseCreate, Expense, ExpenseUpdate, 
+    IncomeCreate, IncomeUpdate, AnalyticsResponse,
+    BudgetCreate, BudgetUpdate,
+    RecurringExpenseCreate, RecurringExpenseUpdate
+)
 from .database import (
     load_expenses, add_expense, get_expense, update_expense, 
     delete_expense, get_expenses_by_month, get_all_months,
     load_incomes, add_income, get_income, update_income,
-    delete_income, get_income_by_month
+    delete_income, get_income_by_month,
+    load_budgets, add_budget, get_budget, update_budget, delete_budget,
+    load_recurring_expenses, add_recurring_expense, get_recurring_expense,
+    update_recurring_expense, delete_recurring_expense, process_recurring_expenses
 )
 from .llm import parse_expense_with_llm, get_categories, parse_income_with_llm, get_income_sources
 
@@ -315,3 +323,137 @@ async def get_trends():
         })
     
     return {"trends": trends}
+
+
+# ============ Budget Endpoints ============
+
+@app.get("/budgets")
+async def list_budgets():
+    """Get all budgets."""
+    budgets = load_budgets()
+    return {"budgets": budgets}
+
+
+@app.post("/budgets")
+async def create_budget(budget: BudgetCreate, authorized: bool = Depends(verify_auth)):
+    """Create a new budget."""
+    budget_data = {
+        "category": budget.category,
+        "monthly_limit": budget.monthly_limit
+    }
+    saved = add_budget(budget_data)
+    return {"success": True, "budget": saved}
+
+
+@app.get("/budgets/{budget_id}")
+async def get_single_budget(budget_id: str):
+    """Get a single budget by ID."""
+    budget = get_budget(budget_id)
+    if not budget:
+        raise HTTPException(status_code=404, detail="Budget not found")
+    return {"budget": budget}
+
+
+@app.put("/budgets/{budget_id}")
+async def update_single_budget(budget_id: str, update: BudgetUpdate, authorized: bool = Depends(verify_auth)):
+    """Update a budget."""
+    updated = update_budget(budget_id, update.model_dump())
+    if not updated:
+        raise HTTPException(status_code=404, detail="Budget not found")
+    return {"success": True, "budget": updated}
+
+
+@app.delete("/budgets/{budget_id}")
+async def delete_single_budget(budget_id: str, authorized: bool = Depends(verify_auth)):
+    """Delete a budget."""
+    if delete_budget(budget_id):
+        return {"success": True}
+    raise HTTPException(status_code=404, detail="Budget not found")
+
+
+@app.get("/budgets/status/{year}/{month}")
+async def get_budget_status(year: int, month: int):
+    """Get budget status with spending progress for a specific month."""
+    budgets = load_budgets()
+    expenses = get_expenses_by_month(year, month)
+    
+    # Calculate spending by category
+    spending_by_category = defaultdict(float)
+    for expense in expenses:
+        category = expense.get("category", "Other")
+        spending_by_category[category] += expense.get("amount", 0)
+    
+    # Build status for each budget
+    status = []
+    for budget in budgets:
+        category = budget["category"]
+        limit = budget["monthly_limit"]
+        spent = spending_by_category.get(category, 0)
+        percentage = (spent / limit * 100) if limit > 0 else 0
+        
+        status.append({
+            "id": budget["id"],
+            "category": category,
+            "monthly_limit": limit,
+            "spent": round(spent, 2),
+            "remaining": round(limit - spent, 2),
+            "percentage": round(percentage, 1),
+            "status": "exceeded" if percentage >= 100 else "warning" if percentage >= 80 else "ok"
+        })
+    
+    return {"budget_status": status, "month": f"{year}-{month:02d}"}
+
+
+# ============ Recurring Expense Endpoints ============
+
+@app.get("/recurring")
+async def list_recurring_expenses():
+    """Get all recurring expenses."""
+    recurring = load_recurring_expenses()
+    return {"recurring": recurring}
+
+
+@app.post("/recurring")
+async def create_recurring_expense(recurring: RecurringExpenseCreate, authorized: bool = Depends(verify_auth)):
+    """Create a new recurring expense."""
+    recurring_data = {
+        "description": recurring.description,
+        "amount": recurring.amount,
+        "category": recurring.category,
+        "day_of_month": recurring.day_of_month
+    }
+    saved = add_recurring_expense(recurring_data)
+    return {"success": True, "recurring": saved}
+
+
+@app.get("/recurring/{recurring_id}")
+async def get_single_recurring_expense(recurring_id: str):
+    """Get a single recurring expense by ID."""
+    recurring = get_recurring_expense(recurring_id)
+    if not recurring:
+        raise HTTPException(status_code=404, detail="Recurring expense not found")
+    return {"recurring": recurring}
+
+
+@app.put("/recurring/{recurring_id}")
+async def update_single_recurring_expense(recurring_id: str, update: RecurringExpenseUpdate, authorized: bool = Depends(verify_auth)):
+    """Update a recurring expense."""
+    updated = update_recurring_expense(recurring_id, update.model_dump())
+    if not updated:
+        raise HTTPException(status_code=404, detail="Recurring expense not found")
+    return {"success": True, "recurring": updated}
+
+
+@app.delete("/recurring/{recurring_id}")
+async def delete_single_recurring_expense(recurring_id: str, authorized: bool = Depends(verify_auth)):
+    """Delete a recurring expense."""
+    if delete_recurring_expense(recurring_id):
+        return {"success": True}
+    raise HTTPException(status_code=404, detail="Recurring expense not found")
+
+
+@app.post("/recurring/process")
+async def trigger_recurring_processing(authorized: bool = Depends(verify_auth)):
+    """Manually trigger processing of recurring expenses."""
+    added = process_recurring_expenses()
+    return {"success": True, "added_count": len(added), "added_expenses": added}

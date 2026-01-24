@@ -1,0 +1,227 @@
+.recurring-manager {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  padding: 1.5rem;
+}
+
+.header-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.process-btn {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.process-btn:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-light);
+}
+
+/* Recurring Form */
+.recurring-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+  padding: 1rem;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-lg);
+}
+
+.recurring-form input,
+.recurring-form select {
+  padding: 0.75rem 1rem;
+  font-family: inherit;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  outline: none;
+}
+
+.recurring-form input:focus,
+.recurring-form select:focus {
+  border-color: var(--primary);
+}
+
+.recurring-form .form-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+/* Recurring List */
+.recurring-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.recurring-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  transition: all 0.2s ease;
+}
+
+.recurring-item.inactive {
+  opacity: 0.5;
+}
+
+.recurring-item:hover {
+  border-color: var(--border-light);
+}
+
+.recurring-icon {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-md);
+  flex-shrink: 0;
+}
+
+.recurring-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.recurring-description {
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+}
+
+.recurring-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.recurring-category {
+  color: var(--text-secondary);
+}
+
+.recurring-schedule {
+  color: var(--text-muted);
+}
+
+.recurring-amount {
+  font-family: var(--font-mono);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  flex-shrink: 0;
+}
+
+.recurring-actions {
+  display: flex;
+  gap: 0.25rem;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.recurring-item:hover .recurring-actions {
+  opacity: 1;
+}
+
+.recurring-actions button {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.recurring-actions .toggle-btn:hover {
+  background: rgba(99, 102, 241, 0.1);
+}
+
+.recurring-actions .edit-btn:hover {
+  background: rgba(99, 102, 241, 0.1);
+}
+
+.recurring-actions .delete-btn:hover {
+  background: rgba(239, 68, 68, 0.1);
+}
+
+/* Edit Mode */
+.recurring-edit {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.recurring-edit input,
+.recurring-edit select {
+  flex: 1;
+  min-width: 100px;
+  padding: 0.5rem 0.75rem;
+  font-family: inherit;
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  outline: none;
+}
+
+.recurring-edit input[type="number"] {
+  width: 80px;
+  flex: 0;
+}
+
+.recurring-info-text {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-subtle);
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+@media (max-width: 768px) {
+  .recurring-form {
+    grid-template-columns: 1fr;
+  }
+  
+  .recurring-item {
+    flex-wrap: wrap;
+  }
+  
+  .recurring-actions {
+    opacity: 1;
+  }
+  
+  .header-actions {
+    flex-direction: column;
+  }
+}
