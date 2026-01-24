@@ -1,6 +1,6 @@
 # Spend - AI Expense Tracker
 
-**Made by Deva Anand** | Built with [Cursor AI](https://cursor.sh)
+**Made by Deva Anand** 
 
 A simple expense tracker that uses AI to automatically categorize your spending. Just type "chipotle $14" and the AI handles the rest.
 
@@ -271,6 +271,6 @@ MIT - Use it however you want.
 
 ---
 
-**Made by Deva Anand** - Built with help from Cursor AI
+**Made by Deva Anand**
 
 Feel free to clone, fork, and make it your own.
