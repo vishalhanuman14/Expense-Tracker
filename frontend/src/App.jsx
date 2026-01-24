@@ -73,12 +73,21 @@ function App() {
   // Filtered expenses based on search and category
   const filteredExpenses = useMemo(() => {
     return expenses.filter(expense => {
+      // 1. Search Filter
       const matchesSearch = !searchQuery || 
         expense.description.toLowerCase().includes(searchQuery.toLowerCase())
+      
+      // 2. Category Dropdown Filter
       const matchesCategory = !categoryFilter || expense.category === categoryFilter
-      return matchesSearch && matchesCategory
+
+      // 3. View Mode Privacy Filter
+      // If in view only mode, filter out sensitive categories
+      const isSensitive = ['Alcohol & Bars', 'Tobacco & Vapes'].includes(expense.category);
+      const isHidden = isViewOnly && isSensitive;
+
+      return matchesSearch && matchesCategory && !isHidden
     })
-  }, [expenses, searchQuery, categoryFilter])
+  }, [expenses, searchQuery, categoryFilter, isViewOnly])
 
   // Filtered income based on search
   const filteredIncome = useMemo(() => {
