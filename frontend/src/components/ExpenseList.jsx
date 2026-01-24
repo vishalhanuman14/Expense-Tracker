@@ -162,7 +162,7 @@ function formatDate(dateStr) {
   } else {
     // Format as "Jan 17" without using Date object to avoid timezone issues
     const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-    return `${monthNames[month - 1]} ${day}`
+    return `${monthNames[month]} ${day}`
   }
 }
 
