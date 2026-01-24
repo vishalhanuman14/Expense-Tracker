@@ -187,6 +187,29 @@ function App() {
     }
   }
 
+  const updateExpense = async (id, updates) => {
+    try {
+      const res = await fetch(`${API_URL}/expenses/${id}`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(updates)
+      })
+      
+      if (!res.ok) {
+        const errorData = await res.json()
+        setError(errorData.detail || 'Failed to update expense')
+        return false
+      }
+      
+      await Promise.all([fetchExpenses(), fetchAnalytics(), fetchTrends()])
+      return true
+    } catch (err) {
+      console.error('Failed to update expense:', err)
+      setError(err.message)
+      return false
+    }
+  }
+
   // Show loading while checking auth
   if (checkingAuth) {
     return (
@@ -278,6 +301,7 @@ function App() {
               <ExpenseList 
                 expenses={expenses} 
                 onDelete={canEdit ? deleteExpense : null}
+                onEdit={canEdit ? updateExpense : null}
                 analytics={analytics}
               />
             </motion.div>
