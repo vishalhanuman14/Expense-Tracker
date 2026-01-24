@@ -46,7 +46,7 @@ Rules for parsing dates:
 - Always return date in YYYY-MM-DD format
 
 Return these fields:
-- description: Clean description of the expense
+- description: Clean, properly formatted description. Fix any typos, capitalize properly (e.g., "doordash chiken" → "DoorDash Chicken", "starbuks coffe" → "Starbucks Coffee")
 - amount: Number only (no $ symbol)
 - category: One of: {', '.join(CATEGORIES)}
 - date: YYYY-MM-DD format
