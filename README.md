@@ -27,7 +27,7 @@ A simple expense tracker that uses AI to automatically categorize your spending.
 ### Prerequisites
 - Node.js 18+
 - Python 3.9+
-- OpenAI API Key (get one at platform.openai.com)
+- LLM API Key (OpenAI recommended, but free alternatives work too - see below)
 
 ### 1. Clone the Repo
 
@@ -45,7 +45,7 @@ source venv/bin/activate  # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 
 # Create .env file
-echo "OPENAI_API_KEY=sk-your-key-here" > .env
+echo "OPENAI_API_KEY=sk-your-key-here" > .env  # Or use free LLM API key
 echo "AUTH_PASSWORD=your-password" >> .env
 echo "SUPABASE_URL=https://your-project.supabase.co" >> .env
 echo "SUPABASE_KEY=your-anon-key" >> .env
@@ -217,6 +217,7 @@ CREATE POLICY "Allow all operations on recurring_expenses" ON recurring_expenses
 | Render | Free |
 | Supabase | Free (500MB) |
 | OpenAI | ~$0.01 per 50 expenses |
+| Free LLMs | $0 (Groq, Ollama, Hugging Face) |
 
 ---
 
@@ -250,7 +251,17 @@ Track all money coming in:
 - Frontend: React, Vite, Recharts, Framer Motion
 - Backend: Python, FastAPI
 - Database: Supabase (PostgreSQL)
-- AI: OpenAI GPT-4.1-nano
+- AI: OpenAI GPT-4.1-nano (I use OpenAI because I like it, but you can use free LLMs too!)
+
+### Using Free LLMs Instead
+
+The app uses OpenAI by default, but you can easily swap it for free alternatives:
+
+- **Groq** - Free tier with fast inference (groq.com)
+- **Ollama** - Run models locally (ollama.ai)
+- **Hugging Face** - Free API access (huggingface.co)
+
+Just modify `backend/app/llm.py` to use your preferred LLM's API. The prompt format is simple and works with any LLM that supports chat completions.
 
 ---
 
