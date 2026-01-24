@@ -1,54 +1,65 @@
-# Spend · Expense Tracker
+# 💰 Spend - AI Expense Tracker
 
-A beautiful, AI-powered expense tracker that automatically categorizes your spending using natural language input.
+> **Made with ❤️ by Deva Anand** | Built with [Cursor AI](https://cursor.sh)
 
-![Expense Tracker](https://img.shields.io/badge/status-ready-brightgreen)
+A beautiful, AI-powered expense tracker that automatically categorizes your spending using natural language. Just type "chipotle $14" and AI does the rest!
 
-## Features
+![Status](https://img.shields.io/badge/status-live-brightgreen)
+![License](https://img.shields.io/badge/license-MIT-blue)
+![Made with Cursor](https://img.shields.io/badge/made%20with-Cursor%20AI-blueviolet)
 
-- **Natural Language Input**: Just type "popeyes $12" and the AI will parse and categorize it
-- **AI-Powered Categorization**: Uses OpenAI to automatically categorize expenses into 12 categories
-- **Monthly Analytics**: Beautiful charts showing spending trends, category breakdowns, and daily patterns
-- **Trend Analysis**: See where you're spending more over time
-- **Local Storage**: Data stored in JSON for easy local testing (SQLite-ready for production)
-- **Dark Theme**: Modern, sleek UI with amber accents
+---
 
-## Tech Stack
+## ✨ Features
 
-- **Frontend**: React 18 + Vite, Framer Motion, Recharts
-- **Backend**: Python FastAPI
-- **Storage**: JSON file (local), easily upgradeable to SQLite
-- **AI**: OpenAI GPT-3.5-turbo for expense categorization
+- 🧠 **AI-Powered Categorization** - Type naturally, AI categorizes automatically
+- 📝 **Typo Correction** - AI fixes spelling mistakes in your input
+- 📊 **Monthly Analytics** - Beautiful charts showing spending trends
+- 🔐 **Password Protection** - Only you can add/edit expenses
+- 👀 **Guest View Mode** - Others can view without editing
+- 🌙 **Dark Theme** - Easy on the eyes
+- 💸 **Free Hosting** - Runs on free tiers (Vercel + Render + Supabase)
 
-## Quick Start
+---
+
+## 🚀 Quick Start (For College Students!)
+
+Want your own expense tracker? Follow these steps:
 
 ### Prerequisites
+- [Node.js](https://nodejs.org/) (v18+)
+- [Python](https://python.org/) (v3.9+)
+- [Git](https://git-scm.com/)
+- OpenAI API Key ([get one here](https://platform.openai.com/api-keys) - ~$5 lasts months!)
 
-- Node.js 18+
-- Python 3.9+
-- OpenAI API Key
+### 1️⃣ Clone the Repo
 
-### Backend Setup
+```bash
+git clone https://github.com/Deva-1903/Expense-Tracker.git
+cd Expense-Tracker
+```
+
+### 2️⃣ Set Up Backend
 
 ```bash
 cd backend
 
 # Create virtual environment
 python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+source venv/bin/activate  # Windows: venv\Scripts\activate
 
 # Install dependencies
 pip install -r requirements.txt
 
-# Create .env file with your OpenAI API key and auth password
-echo "OPENAI_API_KEY=sk-your-api-key-here" > .env
-echo "AUTH_PASSWORD=your-secret-password" >> .env
+# Create .env file
+echo "OPENAI_API_KEY=sk-your-key-here" > .env
+echo "AUTH_PASSWORD=your-password" >> .env
 
 # Run the server
 uvicorn app.main:app --reload --port 8000
 ```
 
-### Frontend Setup
+### 3️⃣ Set Up Frontend
 
 ```bash
 cd frontend
@@ -56,85 +67,67 @@ cd frontend
 # Install dependencies
 npm install
 
-# Run development server
+# Run the app
 npm run dev
 ```
 
-### Usage
+### 4️⃣ Open in Browser
 
-1. Make sure your `.env` file in `backend/` has your OpenAI API key
-2. Open http://localhost:5173 in your browser
-3. If `AUTH_PASSWORD` is set, you'll see a login screen - enter your password
-4. Start adding expenses using natural language!
+Go to **http://localhost:5173** and start tracking! 🎉
 
-### Environment Variables
+---
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `OPENAI_API_KEY` | Yes | Your OpenAI API key for expense categorization |
-| `AUTH_PASSWORD` | No | Password to protect add/edit/delete operations (recommended for hosting) |
-| `SUPABASE_URL` | For production | Your Supabase project URL |
-| `SUPABASE_KEY` | For production | Your Supabase anon/public key |
+## 📱 How to Use
 
-## Example Inputs
+Just type your expenses naturally:
 
-- `popeyes $12.50`
-- `uber to airport $45`
-- `netflix subscription $15.99`
-- `groceries at costco $150`
-- `coffee at starbucks $6.50 yesterday`
+| Input | AI Output |
+|-------|-----------|
+| `chipotle $14` | 🍽️ Chipotle - Food & Dining - $14.00 |
+| `uber to campus $8` | 🚗 Uber to Campus - Transportation - $8.00 |
+| `rent $850 on jan 1` | 🏠 Rent - Rent & Housing - $850.00 (Jan 1) |
+| `beer at bar $25 yesterday` | 🍺 Beer at Bar - Alcohol & Bars - $25.00 |
+| `starbuks cofee $6` | ☕ Starbucks Coffee - Food & Dining - $6.00 |
 
-## Expense Categories
+The AI automatically:
+- ✅ Fixes typos
+- ✅ Picks the right category
+- ✅ Parses dates from natural language
+- ✅ Formats descriptions nicely
 
-The AI automatically categorizes expenses into:
+---
 
-- 🍽️ Food & Dining
-- 🛒 Groceries
-- 🚗 Transportation
-- 🎬 Entertainment
-- 🛍️ Shopping
-- 📱 Bills & Utilities
-- 💊 Health & Medical
-- ✈️ Travel
-- 📚 Education
-- 💅 Personal Care
-- 📺 Subscriptions
-- 📦 Other
+## 📂 Categories
 
-## API Endpoints
+| Category | Icon | Examples |
+|----------|------|----------|
+| Rent & Housing | 🏠 | Rent, furniture |
+| Utilities | 💡 | Electric, internet, phone |
+| Groceries | 🛒 | Walmart, Trader Joe's |
+| Food & Dining | 🍽️ | Restaurants, DoorDash, coffee |
+| Transportation | 🚗 | Gas, Uber, parking |
+| Alcohol & Bars | 🍺 | Bars, liquor store |
+| Tobacco & Vapes | 🚬 | Cigarettes, vapes |
+| Entertainment | 🎬 | Movies, concerts, games |
+| Subscriptions | 📺 | Netflix, Spotify, gym |
+| Shopping | 🛍️ | Amazon, clothes |
+| Health & Fitness | 💪 | Gym, pharmacy |
+| Personal Care | 💅 | Haircuts, toiletries |
+| Education | 📚 | Books, courses |
+| Travel | ✈️ | Flights, hotels |
+| Gifts & Donations | 🎁 | Presents, tips |
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/` | API info |
-| GET | `/categories` | List all categories |
-| POST | `/expenses` | Create expense with AI categorization |
-| GET | `/expenses` | List all expenses |
-| GET | `/expenses?year=2024&month=1` | Filter by month |
-| PUT | `/expenses/{id}` | Update expense |
-| DELETE | `/expenses/{id}` | Delete expense |
-| GET | `/analytics` | Get spending analytics |
-| GET | `/analytics/months` | Get months with data |
-| GET | `/analytics/trends` | Get monthly trends |
+---
 
-## Deployment (Free Hosting)
+## 🌐 Deploy Your Own (FREE!)
 
-### Step 1: Push to GitHub
+### Step 1: Fork & Clone
+Fork this repo to your GitHub, then clone it.
 
-```bash
-cd /Users/devaanand/Desktop/Coding\ Stuff/Expense\ Tracker
-git init
-git add .
-git commit -m "Initial commit"
-# Create a repo on GitHub, then:
-git remote add origin https://github.com/YOUR_USERNAME/expense-tracker.git
-git push -u origin main
-```
-
-### Step 2: Set Up Supabase Database (FREE)
-
-1. Go to [supabase.com](https://supabase.com) → Sign up
-2. Click **New Project** → Name it `expense-tracker`
-3. Go to **SQL Editor** and run this:
+### Step 2: Set Up Supabase (Database - FREE)
+1. Go to [supabase.com](https://supabase.com) → Create account
+2. New Project → Name it `expense-tracker`
+3. SQL Editor → Run:
 
 ```sql
 CREATE TABLE expenses (
@@ -148,59 +141,79 @@ CREATE TABLE expenses (
 );
 ```
 
-4. Go to **Settings → API** and copy:
-   - **Project URL** (e.g., `https://xxx.supabase.co`)
-   - **anon public key**
+4. Settings → API → Copy **URL** and **anon key**
 
-### Step 3: Deploy Backend to Render (FREE)
-
-1. Go to [render.com](https://render.com) and sign up
-2. Click **New → Web Service**
-3. Connect your GitHub repo
-4. Configure:
-   - **Name**: `expense-tracker-api`
+### Step 3: Deploy Backend (Render - FREE)
+1. Go to [render.com](https://render.com) → Connect GitHub
+2. New → Web Service → Select your repo
+3. Settings:
    - **Root Directory**: `backend`
-   - **Runtime**: Python 3
    - **Build Command**: `pip install -r requirements.txt`
    - **Start Command**: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
-5. Add Environment Variables:
-   - `OPENAI_API_KEY` = your OpenAI key
-   - `AUTH_PASSWORD` = your secret password
-   - `SUPABASE_URL` = your Supabase project URL
-   - `SUPABASE_KEY` = your Supabase anon key
-6. Click **Create Web Service**
-7. Copy your URL (e.g., `https://expense-tracker-api.onrender.com`)
+4. Environment Variables:
+   - `OPENAI_API_KEY` = your key
+   - `AUTH_PASSWORD` = your password
+   - `SUPABASE_URL` = from step 2
+   - `SUPABASE_KEY` = from step 2
 
-### Step 4: Deploy Frontend to Vercel (FREE)
-
-1. Go to [vercel.com](https://vercel.com) and sign up
-2. Click **Add New → Project**
-3. Import your GitHub repo
-4. Configure:
+### Step 4: Deploy Frontend (Vercel - FREE)
+1. Go to [vercel.com](https://vercel.com) → Connect GitHub
+2. Import your repo
+3. Settings:
    - **Root Directory**: `frontend`
-   - **Framework**: Vite
-5. Add Environment Variable:
-   - `VITE_API_URL` = your Render backend URL (e.g., `https://expense-tracker-api.onrender.com`)
-6. Click **Deploy**
+4. Environment Variables:
+   - `VITE_API_URL` = your Render URL (e.g., `https://your-app.onrender.com`)
+5. Deploy!
 
-### Done! 🎉
-
-Your app is now live:
-- Frontend: `https://your-app.vercel.app`
-- Backend: `https://expense-tracker-api.onrender.com`
-
-### Cost Summary
-
+### 💰 Total Cost: $0/month
 | Service | Cost |
 |---------|------|
-| Vercel (Frontend) | **Free** |
-| Render (Backend) | **Free** (spins down after 15min inactivity) |
-| Supabase (Database) | **Free** (500MB) |
-| OpenAI API | ~$0.01 per 50 expenses |
-| **Total** | **~$0/month** for personal use |
+| Vercel | Free |
+| Render | Free |
+| Supabase | Free (500MB) |
+| OpenAI | ~$0.01 per 50 expenses |
 
-> ⚠️ **Note**: Render free tier spins down after 15 minutes of inactivity. First request after sleep takes ~30 seconds. Upgrade to $7/month for always-on.
+---
 
-## License
+## 🛠️ Tech Stack
 
-MIT
+- **Frontend**: React 18, Vite, Framer Motion, Recharts
+- **Backend**: Python, FastAPI
+- **Database**: Supabase (PostgreSQL)
+- **AI**: OpenAI GPT-4.1-nano
+- **Hosting**: Vercel + Render
+
+---
+
+## 🤝 Contributing
+
+Feel free to fork, clone, and make it your own! PRs welcome.
+
+```bash
+# Fork this repo
+# Clone your fork
+git clone https://github.com/YOUR_USERNAME/Expense-Tracker.git
+
+# Make changes
+# Push and create PR
+```
+
+---
+
+## 📄 License
+
+MIT License - Use it however you want!
+
+---
+
+<div align="center">
+
+### Made by **Deva Anand** 🚀
+
+*A college student who wanted to track spending better*
+
+*Built with the help of [Cursor AI](https://cursor.sh) - the AI-first code editor*
+
+**⭐ Star this repo if you found it helpful!**
+
+</div>
