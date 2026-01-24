@@ -252,8 +252,8 @@ function Analytics({ analytics, trends, selectedMonth, onMonthChange, availableM
                 dataKey="date" 
                 tick={{ fill: '#71717a', fontSize: 11 }}
                 tickFormatter={(val) => {
-                  const d = new Date(val)
-                  return `${d.getMonth()+1}/${d.getDate()}`
+                  const [year, month, day] = val.split('-').map(Number)
+                  return `${month}/${day}`
                 }}
               />
               <YAxis tick={{ fill: '#71717a', fontSize: 12 }} />
@@ -306,7 +306,9 @@ function CustomTrendTooltip({ active, payload }) {
 
 function CustomDailyTooltip({ active, payload }) {
   if (active && payload && payload.length) {
-    const date = new Date(payload[0].payload.date)
+    const dateStr = payload[0].payload.date
+    const [year, month, day] = dateStr.split('-').map(Number)
+    const date = new Date(year, month - 1, day)
     return (
       <div className="custom-tooltip">
         <p className="tooltip-label">{date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</p>

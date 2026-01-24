@@ -135,14 +135,20 @@ function ExpenseList({ expenses, onDelete, analytics }) {
 }
 
 function formatDate(dateStr) {
-  const date = new Date(dateStr)
+  // Parse date string manually to avoid timezone issues
+  // "2026-01-17" should display as Jan 17, not Jan 16
+  const [year, month, day] = dateStr.split('-').map(Number)
+  const date = new Date(year, month - 1, day) // month is 0-indexed
+  
   const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  
   const yesterday = new Date(today)
   yesterday.setDate(yesterday.getDate() - 1)
 
-  if (date.toDateString() === today.toDateString()) {
+  if (date.getTime() === today.getTime()) {
     return 'Today'
-  } else if (date.toDateString() === yesterday.toDateString()) {
+  } else if (date.getTime() === yesterday.getTime()) {
     return 'Yesterday'
   } else {
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
