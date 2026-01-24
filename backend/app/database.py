@@ -7,6 +7,10 @@ import json
 from datetime import datetime
 from typing import List, Optional
 import uuid
+from dotenv import load_dotenv
+
+# Load .env file FIRST before checking env vars
+load_dotenv()
 
 # Check if Supabase is configured
 SUPABASE_URL = os.getenv("SUPABASE_URL")
