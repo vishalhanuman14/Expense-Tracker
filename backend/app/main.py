@@ -1,10 +1,14 @@
 import os
+import io
 from fastapi import FastAPI, HTTPException, Depends, Header
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from datetime import datetime
 from collections import defaultdict
 from dotenv import load_dotenv
 from typing import Optional
+import openpyxl
+from openpyxl.styles import Font, PatternFill, Alignment
 
 from .models import (
     ExpenseCreate, Expense, ExpenseUpdate, 
@@ -457,3 +461,94 @@ async def trigger_recurring_processing(authorized: bool = Depends(verify_auth)):
     """Manually trigger processing of recurring expenses."""
     added = process_recurring_expenses()
     return {"success": True, "added_count": len(added), "added_expenses": added}
+
+
+# ============ Export Endpoint ============
+
+@app.get("/export/excel")
+async def export_excel():
+    """Export all data (expenses, income, budgets, recurring) as an Excel file."""
+    wb = openpyxl.Workbook()
+
+    header_font = Font(bold=True, color="FFFFFF")
+    header_fill_green = PatternFill(start_color="1A7A4A", end_color="1A7A4A", fill_type="solid")
+    header_fill_blue = PatternFill(start_color="1A4A7A", end_color="1A4A7A", fill_type="solid")
+    header_fill_purple = PatternFill(start_color="5A1A7A", end_color="5A1A7A", fill_type="solid")
+    header_fill_orange = PatternFill(start_color="7A4A1A", end_color="7A4A1A", fill_type="solid")
+
+    def style_header_row(ws, fill):
+        for cell in ws[1]:
+            cell.font = header_font
+            cell.fill = fill
+            cell.alignment = Alignment(horizontal="center")
+
+    def auto_width(ws):
+        for col in ws.columns:
+            max_len = max((len(str(cell.value or "")) for cell in col), default=0)
+            ws.column_dimensions[col[0].column_letter].width = max(max_len + 4, 12)
+
+    # --- Expenses Sheet ---
+    expenses = load_expenses()
+    expenses.sort(key=lambda x: x.get("date", ""), reverse=True)
+    ws_exp = wb.active
+    ws_exp.title = "Expenses"
+    ws_exp.append(["Date", "Description", "Amount ($)", "Category"])
+    style_header_row(ws_exp, header_fill_green)
+    for e in expenses:
+        ws_exp.append([
+            e.get("date", ""),
+            e.get("description", ""),
+            e.get("amount", 0),
+            e.get("category", "")
+        ])
+    auto_width(ws_exp)
+
+    # --- Income Sheet ---
+    incomes = load_incomes()
+    incomes.sort(key=lambda x: x.get("date", ""), reverse=True)
+    ws_inc = wb.create_sheet("Income")
+    ws_inc.append(["Date", "Description", "Amount ($)", "Source"])
+    style_header_row(ws_inc, header_fill_blue)
+    for i in incomes:
+        ws_inc.append([
+            i.get("date", ""),
+            i.get("description", ""),
+            i.get("amount", 0),
+            i.get("source", "")
+        ])
+    auto_width(ws_inc)
+
+    # --- Budgets Sheet ---
+    budgets = load_budgets()
+    ws_bud = wb.create_sheet("Budgets")
+    ws_bud.append(["Category", "Monthly Limit ($)"])
+    style_header_row(ws_bud, header_fill_purple)
+    for b in budgets:
+        ws_bud.append([b.get("category", ""), b.get("monthly_limit", 0)])
+    auto_width(ws_bud)
+
+    # --- Recurring Sheet ---
+    recurring = load_recurring_expenses()
+    ws_rec = wb.create_sheet("Recurring")
+    ws_rec.append(["Description", "Amount ($)", "Category", "Day of Month", "Active"])
+    style_header_row(ws_rec, header_fill_orange)
+    for r in recurring:
+        ws_rec.append([
+            r.get("description", ""),
+            r.get("amount", 0),
+            r.get("category", ""),
+            r.get("day_of_month", ""),
+            "Yes" if r.get("is_active", True) else "No"
+        ])
+    auto_width(ws_rec)
+
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    filename = f"expense_tracker_{datetime.now().strftime('%Y-%m-%d')}.xlsx"
+    return StreamingResponse(
+        output,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
