@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion'
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, LineChart, Line, Area, AreaChart
+  PieChart, Pie, Cell, Area, AreaChart
 } from 'recharts'
 import './Analytics.css'
 
@@ -155,11 +155,11 @@ function Analytics({ analytics, trends, selectedMonth, onMonthChange, availableM
         </motion.div>
       </div>
 
-      {/* Charts Row */}
-      <div className="charts-row">
+      {/* Overview Charts */}
+      <div className="charts-row overview-charts">
         {/* Spending by Category */}
         <motion.div 
-          className="chart-card"
+          className="chart-card category-chart-card"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15 }}
@@ -204,7 +204,7 @@ function Analytics({ analytics, trends, selectedMonth, onMonthChange, availableM
 
         {/* Credit vs Debit */}
         <motion.div 
-          className="chart-card"
+          className="chart-card payment-chart-card"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.18 }}
@@ -244,49 +244,53 @@ function Analytics({ analytics, trends, selectedMonth, onMonthChange, availableM
             <div className="chart-empty">No data available</div>
           )}
         </motion.div>
-
-        {/* Top Categories Bar Chart */}
-        <motion.div 
-          className="chart-card"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-        >
-          <h3 className="chart-title">Top Spending Categories</h3>
-          {analytics.top_categories?.length > 0 ? (
-            <ResponsiveContainer width="100%" height={250}>
-              <BarChart 
-                data={analytics.top_categories.slice(0, 5)} 
-                layout="vertical"
-                margin={{ left: 20, right: 20 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                <XAxis type="number" tick={{ fill: '#71717a', fontSize: 12 }} />
-                <YAxis 
-                  type="category" 
-                  dataKey="category" 
-                  width={100}
-                  tick={{ fill: '#a1a1aa', fontSize: 12 }}
-                />
-                <Tooltip content={<CustomBarTooltip />} />
-                <Bar 
-                  dataKey="amount" 
-                  radius={[0, 4, 4, 0]}
-                >
-                  {analytics.top_categories.slice(0, 5).map((entry, index) => (
-                    <Cell 
-                      key={`cell-${index}`} 
-                      fill={categoryColors[entry.category] || CHART_COLORS[index % CHART_COLORS.length]} 
-                    />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="chart-empty">No data available</div>
-          )}
-        </motion.div>
       </div>
+
+      {/* Top Categories Bar Chart */}
+      <motion.div 
+        className="chart-card full-width top-categories-card"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+      >
+        <h3 className="chart-title">Top Spending Categories</h3>
+        {analytics.top_categories?.length > 0 ? (
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart 
+              data={analytics.top_categories.slice(0, 5)} 
+              layout="vertical"
+              margin={{ left: 8, right: 28, top: 4, bottom: 8 }}
+              barCategoryGap={18}
+            >
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+              <XAxis type="number" tick={{ fill: '#71717a', fontSize: 12 }} />
+              <YAxis 
+                type="category" 
+                dataKey="category" 
+                width={128}
+                tick={{ fill: '#a1a1aa', fontSize: 12 }}
+                tickFormatter={formatCategoryAxisLabel}
+                interval={0}
+              />
+              <Tooltip content={<CustomBarTooltip />} />
+              <Bar 
+                dataKey="amount" 
+                radius={[0, 5, 5, 0]}
+                maxBarSize={34}
+              >
+                {analytics.top_categories.slice(0, 5).map((entry, index) => (
+                  <Cell 
+                    key={`cell-${index}`} 
+                    fill={categoryColors[entry.category] || CHART_COLORS[index % CHART_COLORS.length]} 
+                  />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        ) : (
+          <div className="chart-empty">No data available</div>
+        )}
+      </motion.div>
 
       {/* Spending Trend */}
       {trendData.length > 1 && (
@@ -458,6 +462,11 @@ function formatMonthShort(monthStr) {
   const [year, month] = monthStr.split('-')
   const date = new Date(year, month - 1)
   return date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' })
+}
+
+function formatCategoryAxisLabel(value) {
+  if (!value || value.length <= 18) return value
+  return `${value.slice(0, 16)}...`
 }
 
 export default Analytics
