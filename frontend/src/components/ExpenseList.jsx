@@ -59,12 +59,30 @@ const categoryColors = {
   'Other': '#71717a'
 }
 
+const paymentMethods = [
+  { value: 'debit', label: 'Debit / Bank' },
+  { value: 'credit', label: 'Credit Card' }
+]
+
+const paymentMethodLabels = {
+  debit: 'Debit / Bank',
+  credit: 'Credit Card'
+}
+
+const paymentMethodIcons = {
+  debit: '🏦',
+  credit: '💳'
+}
+
+const getPaymentMethod = (expense) => expense.payment_method === 'credit' ? 'credit' : 'debit'
+
 function ExpenseList({ expenses, onDelete, onEdit, analytics }) {
   const [editingExpense, setEditingExpense] = useState(null)
   const [editForm, setEditForm] = useState({
     description: '',
     amount: '',
     category: '',
+    payment_method: 'debit',
     date: ''
   })
 
@@ -74,13 +92,14 @@ function ExpenseList({ expenses, onDelete, onEdit, analytics }) {
       description: expense.description,
       amount: expense.amount.toString(),
       category: expense.category,
+      payment_method: getPaymentMethod(expense),
       date: expense.date.split('T')[0]
     })
   }
 
   const closeEditModal = () => {
     setEditingExpense(null)
-    setEditForm({ description: '', amount: '', category: '', date: '' })
+    setEditForm({ description: '', amount: '', category: '', payment_method: 'debit', date: '' })
   }
 
   const handleEditSubmit = async (e) => {
@@ -91,6 +110,7 @@ function ExpenseList({ expenses, onDelete, onEdit, analytics }) {
       description: editForm.description,
       amount: parseFloat(editForm.amount),
       category: editForm.category,
+      payment_method: editForm.payment_method,
       date: editForm.date
     })
     closeEditModal()
@@ -132,6 +152,9 @@ function ExpenseList({ expenses, onDelete, onEdit, analytics }) {
       <div className="expense-list">
         <AnimatePresence>
           {expenses.map((expense, index) => (
+            (() => {
+              const paymentMethod = getPaymentMethod(expense)
+              return (
             <motion.div
               key={expense.id}
               className="expense-item"
@@ -162,6 +185,9 @@ function ExpenseList({ expenses, onDelete, onEdit, analytics }) {
                     }}
                   >
                     {expense.category}
+                  </span>
+                  <span className={`expense-payment-tag ${paymentMethod}`}>
+                    {paymentMethodIcons[paymentMethod]} {paymentMethodLabels[paymentMethod]}
                   </span>
                   <span className="expense-date">{formatDate(expense.date)}</span>
                 </div>
@@ -197,6 +223,8 @@ function ExpenseList({ expenses, onDelete, onEdit, analytics }) {
                 )}
               </div>
             </motion.div>
+              )
+            })()
           ))}
         </AnimatePresence>
       </div>
@@ -272,6 +300,21 @@ function ExpenseList({ expenses, onDelete, onEdit, analytics }) {
                     {CATEGORIES.map((cat) => (
                       <option key={cat} value={cat}>
                         {categoryIcons[cat]} {cat}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label>Payment Method</label>
+                  <select
+                    value={editForm.payment_method}
+                    onChange={(e) => setEditForm({ ...editForm, payment_method: e.target.value })}
+                    required
+                  >
+                    {paymentMethods.map((method) => (
+                      <option key={method.value} value={method.value}>
+                        {paymentMethodIcons[method.value]} {method.label}
                       </option>
                     ))}
                   </select>

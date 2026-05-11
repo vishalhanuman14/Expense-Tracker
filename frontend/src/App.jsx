@@ -19,6 +19,8 @@ const CATEGORIES = [
   'Gifts & Donations', 'Other'
 ]
 
+const getPaymentMethod = (expense) => expense.payment_method === 'credit' ? 'credit' : 'debit'
+
 function App() {
   const [expenses, setExpenses] = useState([])
   const [income, setIncome] = useState([])
@@ -39,6 +41,7 @@ function App() {
   // Search & Filter state
   const [searchQuery, setSearchQuery] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('')
+  const [paymentMethodFilter, setPaymentMethodFilter] = useState('')
   
   // Auth state
   const [authRequired, setAuthRequired] = useState(false)
@@ -80,14 +83,17 @@ function App() {
       // 2. Category Dropdown Filter
       const matchesCategory = !categoryFilter || expense.category === categoryFilter
 
-      // 3. View Mode Privacy Filter
+      // 3. Payment Method Filter
+      const matchesPaymentMethod = !paymentMethodFilter || getPaymentMethod(expense) === paymentMethodFilter
+
+      // 4. View Mode Privacy Filter
       // If in view only mode, filter out sensitive categories
       const isSensitive = ['Alcohol & Bars', 'Tobacco & Vapes'].includes(expense.category);
       const isHidden = isViewOnly && isSensitive;
 
-      return matchesSearch && matchesCategory && !isHidden
+      return matchesSearch && matchesCategory && matchesPaymentMethod && !isHidden
     })
-  }, [expenses, searchQuery, categoryFilter, isViewOnly])
+  }, [expenses, searchQuery, categoryFilter, paymentMethodFilter, isViewOnly])
 
   // Filtered income based on search
   const filteredIncome = useMemo(() => {
@@ -625,9 +631,15 @@ function App() {
                     <span className="balance-label">Income</span>
                     <span className="balance-value income">+${(analytics.total_income || 0).toLocaleString()}</span>
                   </div>
-                  <div className="balance-card expense-card">
-                    <span className="balance-label">Expenses</span>
-                    <span className="balance-value expense">-${(analytics.total_spent || 0).toLocaleString()}</span>
+                  <div className="balance-card bank-card">
+                    <span className="balance-label">Bank Balance</span>
+                    <span className={`balance-value ${(analytics.current_bank_balance || 0) >= 0 ? 'positive' : 'negative'}`}>
+                      {(analytics.current_bank_balance || 0) >= 0 ? '+' : ''}${(analytics.current_bank_balance || 0).toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="balance-card credit-card">
+                    <span className="balance-label">Credit Card Due</span>
+                    <span className="balance-value credit">-${(analytics.credit_card_balance || 0).toLocaleString()}</span>
                   </div>
                   <div className="balance-card net-card">
                     <span className="balance-label">Net Balance</span>
@@ -674,7 +686,7 @@ function App() {
                   onAdd={activeSubTab === 'spending' ? addExpense : addIncome} 
                   isLoading={isLoading}
                   placeholder={activeSubTab === 'spending' 
-                    ? "e.g., Starbucks coffee $5.50" 
+                    ? "e.g., Starbucks coffee $5.50 on credit" 
                     : "e.g., Paycheck from work $250"
                   }
                   isIncome={activeSubTab === 'income'}
@@ -707,16 +719,27 @@ function App() {
                 </div>
                 
                 {activeSubTab === 'spending' && (
-                  <select
-                    className="category-filter"
-                    value={categoryFilter}
-                    onChange={(e) => setCategoryFilter(e.target.value)}
-                  >
-                    <option value="">All Categories</option>
-                    {CATEGORIES.map(cat => (
-                      <option key={cat} value={cat}>{cat}</option>
-                    ))}
-                  </select>
+                  <>
+                    <select
+                      className="category-filter"
+                      value={categoryFilter}
+                      onChange={(e) => setCategoryFilter(e.target.value)}
+                    >
+                      <option value="">All Categories</option>
+                      {CATEGORIES.map(cat => (
+                        <option key={cat} value={cat}>{cat}</option>
+                      ))}
+                    </select>
+                    <select
+                      className="category-filter"
+                      value={paymentMethodFilter}
+                      onChange={(e) => setPaymentMethodFilter(e.target.value)}
+                    >
+                      <option value="">All Payment Methods</option>
+                      <option value="debit">Debit / Bank</option>
+                      <option value="credit">Credit Card</option>
+                    </select>
+                  </>
                 )}
               </div>
               

@@ -48,6 +48,15 @@ def verify_auth(x_auth_password: Optional[str] = Header(None)):
         )
     return True
 
+
+def get_payment_method(item: dict) -> str:
+    method = str(item.get("payment_method") or "debit").lower()
+    return method if method in {"debit", "credit"} else "debit"
+
+
+def format_payment_method(method: str) -> str:
+    return "Credit" if method == "credit" else "Debit"
+
 # CORS for frontend
 app.add_middleware(
     CORSMiddleware,
@@ -247,8 +256,13 @@ async def get_analytics(year: int = None, month: int = None):
             "month": month_label,
             "total_spent": 0,
             "total_income": 0,
+            "debit_spent": 0,
+            "credit_spent": 0,
+            "credit_card_balance": 0,
+            "current_bank_balance": 0,
             "net_balance": 0,
             "by_category": {},
+            "by_payment_method": {"debit": 0, "credit": 0},
             "by_source": {},
             "daily_spending": [],
             "top_categories": [],
@@ -258,14 +272,17 @@ async def get_analytics(year: int = None, month: int = None):
     
     # Calculate expense totals by category
     by_category = defaultdict(float)
+    by_payment_method = defaultdict(float)
     daily_spending = defaultdict(float)
     
     for expense in expenses:
         amount = expense.get("amount", 0)
         category = expense.get("category", "Other")
+        payment_method = get_payment_method(expense)
         date = expense.get("date", "")
         
         by_category[category] += amount
+        by_payment_method[payment_method] += amount
         if date:
             daily_spending[date] += amount
     
@@ -277,14 +294,26 @@ async def get_analytics(year: int = None, month: int = None):
     daily_list = [{"date": date, "amount": round(amt, 2)} for date, amt in sorted(daily_spending.items())]
     
     total_spent = sum(by_category.values())
-    net_balance = total_income - total_spent
+    debit_spent = by_payment_method.get("debit", 0)
+    credit_spent = by_payment_method.get("credit", 0)
+    credit_card_balance = credit_spent
+    current_bank_balance = total_income - debit_spent
+    net_balance = current_bank_balance - credit_card_balance
     
     return {
         "month": month_label,
         "total_spent": round(total_spent, 2),
         "total_income": round(total_income, 2),
+        "debit_spent": round(debit_spent, 2),
+        "credit_spent": round(credit_spent, 2),
+        "credit_card_balance": round(credit_card_balance, 2),
+        "current_bank_balance": round(current_bank_balance, 2),
         "net_balance": round(net_balance, 2),
         "by_category": {k: round(v, 2) for k, v in by_category.items()},
+        "by_payment_method": {
+            "debit": round(debit_spent, 2),
+            "credit": round(credit_spent, 2)
+        },
         "by_source": {k: round(v, 2) for k, v in by_source.items()},
         "daily_spending": daily_list,
         "top_categories": top_categories,
@@ -311,17 +340,22 @@ async def get_trends():
         expenses = get_expenses_by_month(year, month)
         
         by_category = defaultdict(float)
+        by_payment_method = defaultdict(float)
         total = 0
         
         for expense in expenses:
             amount = expense.get("amount", 0)
             category = expense.get("category", "Other")
+            payment_method = get_payment_method(expense)
             by_category[category] += amount
+            by_payment_method[payment_method] += amount
             total += amount
         
         trends.append({
             "month": month_str,
             "total": round(total, 2),
+            "debit_spent": round(by_payment_method.get("debit", 0), 2),
+            "credit_spent": round(by_payment_method.get("credit", 0), 2),
             "by_category": {k: round(v, 2) for k, v in by_category.items()},
             "expense_count": len(expenses)
         })
@@ -424,6 +458,7 @@ async def create_recurring_expense(recurring: RecurringExpenseCreate, authorized
         "description": recurring.description,
         "amount": recurring.amount,
         "category": recurring.category,
+        "payment_method": recurring.payment_method,
         "day_of_month": recurring.day_of_month
     }
     saved = add_recurring_expense(recurring_data)
@@ -492,14 +527,15 @@ async def export_excel():
     expenses.sort(key=lambda x: x.get("date", ""), reverse=True)
     ws_exp = wb.active
     ws_exp.title = "Expenses"
-    ws_exp.append(["Date", "Description", "Amount ($)", "Category"])
+    ws_exp.append(["Date", "Description", "Amount ($)", "Category", "Payment Method"])
     style_header_row(ws_exp, header_fill_green)
     for e in expenses:
         ws_exp.append([
             e.get("date", ""),
             e.get("description", ""),
             e.get("amount", 0),
-            e.get("category", "")
+            e.get("category", ""),
+            format_payment_method(get_payment_method(e))
         ])
     auto_width(ws_exp)
 
@@ -530,13 +566,14 @@ async def export_excel():
     # --- Recurring Sheet ---
     recurring = load_recurring_expenses()
     ws_rec = wb.create_sheet("Recurring")
-    ws_rec.append(["Description", "Amount ($)", "Category", "Day of Month", "Active"])
+    ws_rec.append(["Description", "Amount ($)", "Category", "Payment Method", "Day of Month", "Active"])
     style_header_row(ws_rec, header_fill_orange)
     for r in recurring:
         ws_rec.append([
             r.get("description", ""),
             r.get("amount", 0),
             r.get("category", ""),
+            format_payment_method(get_payment_method(r)),
             r.get("day_of_month", ""),
             "Yes" if r.get("is_active", True) else "No"
         ])

@@ -28,6 +28,23 @@ const categoryIcons = {
   'Other': '📦'
 }
 
+const paymentMethods = [
+  { value: 'debit', label: 'Debit / Bank' },
+  { value: 'credit', label: 'Credit Card' }
+]
+
+const paymentMethodLabels = {
+  debit: 'Debit / Bank',
+  credit: 'Credit Card'
+}
+
+const paymentMethodIcons = {
+  debit: '🏦',
+  credit: '💳'
+}
+
+const getPaymentMethod = (item) => item.payment_method === 'credit' ? 'credit' : 'debit'
+
 function RecurringManager({ recurring, onAdd, onUpdate, onDelete, onProcess, canEdit }) {
   const [isAdding, setIsAdding] = useState(false)
   const [editingId, setEditingId] = useState(null)
@@ -35,6 +52,7 @@ function RecurringManager({ recurring, onAdd, onUpdate, onDelete, onProcess, can
     description: '',
     amount: '',
     category: '',
+    payment_method: 'debit',
     day_of_month: ''
   })
 
@@ -46,9 +64,10 @@ function RecurringManager({ recurring, onAdd, onUpdate, onDelete, onProcess, can
       description: form.description,
       amount: parseFloat(form.amount),
       category: form.category,
+      payment_method: form.payment_method,
       day_of_month: parseInt(form.day_of_month)
     })
-    setForm({ description: '', amount: '', category: '', day_of_month: '' })
+    setForm({ description: '', amount: '', category: '', payment_method: 'debit', day_of_month: '' })
     setIsAdding(false)
   }
 
@@ -57,10 +76,11 @@ function RecurringManager({ recurring, onAdd, onUpdate, onDelete, onProcess, can
       description: form.description,
       amount: parseFloat(form.amount),
       category: form.category,
+      payment_method: form.payment_method,
       day_of_month: parseInt(form.day_of_month)
     })
     setEditingId(null)
-    setForm({ description: '', amount: '', category: '', day_of_month: '' })
+    setForm({ description: '', amount: '', category: '', payment_method: 'debit', day_of_month: '' })
   }
 
   const toggleActive = async (item) => {
@@ -73,13 +93,14 @@ function RecurringManager({ recurring, onAdd, onUpdate, onDelete, onProcess, can
       description: item.description,
       amount: item.amount.toString(),
       category: item.category,
+      payment_method: getPaymentMethod(item),
       day_of_month: item.day_of_month.toString()
     })
   }
 
   const cancelEdit = () => {
     setEditingId(null)
-    setForm({ description: '', amount: '', category: '', day_of_month: '' })
+    setForm({ description: '', amount: '', category: '', payment_method: 'debit', day_of_month: '' })
   }
 
   const getOrdinalSuffix = (day) => {
@@ -146,6 +167,17 @@ function RecurringManager({ recurring, onAdd, onUpdate, onDelete, onProcess, can
                 <option key={cat} value={cat}>{categoryIcons[cat]} {cat}</option>
               ))}
             </select>
+            <select
+              value={form.payment_method}
+              onChange={(e) => setForm({ ...form, payment_method: e.target.value })}
+              required
+            >
+              {paymentMethods.map(method => (
+                <option key={method.value} value={method.value}>
+                  {paymentMethodIcons[method.value]} {method.label}
+                </option>
+              ))}
+            </select>
             <input
               type="number"
               placeholder="Day of month (1-28)"
@@ -202,6 +234,16 @@ function RecurringManager({ recurring, onAdd, onUpdate, onDelete, onProcess, can
                       <option key={cat} value={cat}>{cat}</option>
                     ))}
                   </select>
+                  <select
+                    value={form.payment_method}
+                    onChange={(e) => setForm({ ...form, payment_method: e.target.value })}
+                  >
+                    {paymentMethods.map(method => (
+                      <option key={method.value} value={method.value}>
+                        {method.label}
+                      </option>
+                    ))}
+                  </select>
                   <input
                     type="number"
                     value={form.day_of_month}
@@ -225,6 +267,9 @@ function RecurringManager({ recurring, onAdd, onUpdate, onDelete, onProcess, can
                     <div className="recurring-description">{item.description}</div>
                     <div className="recurring-meta">
                       <span className="recurring-category">{item.category}</span>
+                      <span className={`recurring-payment ${getPaymentMethod(item)}`}>
+                        {paymentMethodIcons[getPaymentMethod(item)]} {paymentMethodLabels[getPaymentMethod(item)]}
+                      </span>
                       <span className="recurring-schedule">
                         {item.day_of_month}{getOrdinalSuffix(item.day_of_month)} of each month
                       </span>

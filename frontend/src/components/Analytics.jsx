@@ -26,6 +26,11 @@ const categoryColors = {
 
 const CHART_COLORS = ['#f59e0b', '#22c55e', '#3b82f6', '#a855f7', '#ec4899', '#6366f1', '#ef4444', '#06b6d4']
 
+const paymentMethodColors = {
+  debit: '#22c55e',
+  credit: '#3b82f6'
+}
+
 function Analytics({ analytics, trends, selectedMonth, onMonthChange, availableMonths }) {
   if (!analytics) {
     return (
@@ -43,9 +48,26 @@ function Analytics({ analytics, trends, selectedMonth, onMonthChange, availableM
     color: categoryColors[name] || '#71717a'
   }))
 
+  const paymentData = [
+    {
+      name: 'Debit / Bank',
+      method: 'debit',
+      value: analytics.by_payment_method?.debit || 0,
+      color: paymentMethodColors.debit
+    },
+    {
+      name: 'Credit Card',
+      method: 'credit',
+      value: analytics.by_payment_method?.credit || 0,
+      color: paymentMethodColors.credit
+    }
+  ].filter(item => item.value > 0)
+
   const trendData = trends.map(t => ({
     month: formatMonthShort(t.month),
     total: t.total,
+    debitSpent: t.debit_spent || 0,
+    creditSpent: t.credit_spent || 0,
     count: t.expense_count
   })).reverse()
 
@@ -93,6 +115,27 @@ function Analytics({ analytics, trends, selectedMonth, onMonthChange, availableM
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.05 }}
         >
+          <span className="card-label">Debit Spend</span>
+          <span className="card-value debit-value">${(analytics.debit_spent || 0).toLocaleString()}</span>
+        </motion.div>
+
+        <motion.div 
+          className="summary-card"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+        >
+          <span className="card-label">Credit Spend</span>
+          <span className="card-value credit-value">${(analytics.credit_spent || 0).toLocaleString()}</span>
+          <span className="card-subtitle">${(analytics.credit_card_balance || 0).toLocaleString()} due</span>
+        </motion.div>
+
+        <motion.div 
+          className="summary-card"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+        >
           <span className="card-label">Average per Expense</span>
           <span className="card-value">
             ${analytics.expense_count > 0 
@@ -105,7 +148,7 @@ function Analytics({ analytics, trends, selectedMonth, onMonthChange, availableM
           className="summary-card"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
+          transition={{ delay: 0.2 }}
         >
           <span className="card-label">Categories Used</span>
           <span className="card-value">{Object.keys(analytics.by_category || {}).length}</span>
@@ -147,6 +190,49 @@ function Analytics({ analytics, trends, selectedMonth, onMonthChange, availableM
               <div className="pie-legend">
                 {pieData.slice(0, 5).map((item, i) => (
                   <div key={i} className="legend-item">
+                    <span className="legend-dot" style={{ background: item.color }} />
+                    <span className="legend-label">{item.name}</span>
+                    <span className="legend-value">${item.value.toFixed(0)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="chart-empty">No data available</div>
+          )}
+        </motion.div>
+
+        {/* Credit vs Debit */}
+        <motion.div 
+          className="chart-card"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.18 }}
+        >
+          <h3 className="chart-title">Credit vs Debit</h3>
+          {paymentData.length > 0 ? (
+            <div className="pie-chart-container">
+              <ResponsiveContainer width="100%" height={250}>
+                <PieChart>
+                  <Pie
+                    data={paymentData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={90}
+                    paddingAngle={2}
+                    dataKey="value"
+                  >
+                    {paymentData.map((entry, index) => (
+                      <Cell key={`payment-cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip content={<CustomPaymentTooltip />} />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="pie-legend">
+                {paymentData.map((item) => (
+                  <div key={item.method} className="legend-item">
                     <span className="legend-dot" style={{ background: item.color }} />
                     <span className="legend-label">{item.name}</span>
                     <span className="legend-value">${item.value.toFixed(0)}</span>
@@ -236,6 +322,28 @@ function Analytics({ analytics, trends, selectedMonth, onMonthChange, availableM
         </motion.div>
       )}
 
+      {/* Monthly Credit vs Debit */}
+      {trendData.length > 1 && (
+        <motion.div 
+          className="chart-card full-width"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.28 }}
+        >
+          <h3 className="chart-title">Monthly Credit vs Debit</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={trendData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+              <XAxis dataKey="month" tick={{ fill: '#71717a', fontSize: 12 }} />
+              <YAxis tick={{ fill: '#71717a', fontSize: 12 }} />
+              <Tooltip content={<CustomPaymentTrendTooltip />} />
+              <Bar dataKey="debitSpent" stackId="payment" name="Debit / Bank" fill={paymentMethodColors.debit} radius={[0, 0, 4, 4]} />
+              <Bar dataKey="creditSpent" stackId="payment" name="Credit Card" fill={paymentMethodColors.credit} radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </motion.div>
+      )}
+
       {/* Daily Spending */}
       {analytics.daily_spending?.length > 0 && (
         <motion.div 
@@ -279,12 +387,39 @@ function CustomPieTooltip({ active, payload }) {
   return null
 }
 
+function CustomPaymentTooltip({ active, payload }) {
+  if (active && payload && payload.length) {
+    return (
+      <div className="custom-tooltip">
+        <p className="tooltip-label">{payload[0].payload.name}</p>
+        <p className="tooltip-value">${payload[0].value.toFixed(2)}</p>
+      </div>
+    )
+  }
+  return null
+}
+
 function CustomBarTooltip({ active, payload }) {
   if (active && payload && payload.length) {
     return (
       <div className="custom-tooltip">
         <p className="tooltip-label">{payload[0].payload.category}</p>
         <p className="tooltip-value">${payload[0].value.toFixed(2)}</p>
+      </div>
+    )
+  }
+  return null
+}
+
+function CustomPaymentTrendTooltip({ active, payload, label }) {
+  if (active && payload && payload.length) {
+    const debit = payload.find(item => item.dataKey === 'debitSpent')?.value || 0
+    const credit = payload.find(item => item.dataKey === 'creditSpent')?.value || 0
+    return (
+      <div className="custom-tooltip">
+        <p className="tooltip-label">{label}</p>
+        <p className="tooltip-value debit-tooltip">Debit: ${debit.toFixed(2)}</p>
+        <p className="tooltip-value credit-tooltip">Credit: ${credit.toFixed(2)}</p>
       </div>
     )
   }

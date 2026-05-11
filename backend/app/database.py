@@ -26,10 +26,39 @@ else:
     USE_SUPABASE = False
     print("✓ Using local JSON storage")
 
+PAYMENT_METHODS = {"debit", "credit"}
+
 
 # ============ JSON Storage (Local Development) ============
 
 DATA_FILE = os.path.join(os.path.dirname(__file__), "..", "data", "expenses.json")
+
+
+def _normalize_payment_method(value: str) -> str:
+    method = str(value or "").strip().lower()
+    return method if method in PAYMENT_METHODS else "debit"
+
+
+def _normalize_expense(expense: dict) -> dict:
+    return {
+        **expense,
+        "payment_method": _normalize_payment_method(expense.get("payment_method"))
+    }
+
+
+def _normalize_expenses(expenses: List[dict]) -> List[dict]:
+    return [_normalize_expense(expense) for expense in expenses]
+
+
+def _normalize_recurring_expense(item: dict) -> dict:
+    return {
+        **item,
+        "payment_method": _normalize_payment_method(item.get("payment_method"))
+    }
+
+
+def _normalize_recurring_expenses(items: List[dict]) -> List[dict]:
+    return [_normalize_recurring_expense(item) for item in items]
 
 
 def _ensure_data_dir():
@@ -62,9 +91,9 @@ def load_expenses() -> List[dict]:
     """Load all expenses."""
     if USE_SUPABASE:
         response = supabase.table("expenses").select("*").order("date", desc=True).execute()
-        return response.data or []
+        return _normalize_expenses(response.data or [])
     else:
-        return _load_json()
+        return _normalize_expenses(_load_json())
 
 
 def add_expense(expense_data: dict) -> dict:
@@ -72,8 +101,10 @@ def add_expense(expense_data: dict) -> dict:
     expense = {
         "id": str(uuid.uuid4()),
         "created_at": datetime.now().isoformat(),
+        "payment_method": "debit",
         **expense_data
     }
+    expense["payment_method"] = _normalize_payment_method(expense.get("payment_method"))
     
     if USE_SUPABASE:
         response = supabase.table("expenses").insert(expense).execute()
@@ -89,29 +120,31 @@ def get_expense(expense_id: str) -> Optional[dict]:
     """Get a single expense by ID."""
     if USE_SUPABASE:
         response = supabase.table("expenses").select("*").eq("id", expense_id).execute()
-        return response.data[0] if response.data else None
+        return _normalize_expense(response.data[0]) if response.data else None
     else:
         expenses = _load_json()
         for expense in expenses:
             if expense["id"] == expense_id:
-                return expense
+                return _normalize_expense(expense)
         return None
 
 
 def update_expense(expense_id: str, update_data: dict) -> Optional[dict]:
     """Update an expense."""
     clean_data = {k: v for k, v in update_data.items() if v is not None}
+    if "payment_method" in clean_data:
+        clean_data["payment_method"] = _normalize_payment_method(clean_data["payment_method"])
     
     if USE_SUPABASE:
         response = supabase.table("expenses").update(clean_data).eq("id", expense_id).execute()
-        return response.data[0] if response.data else None
+        return _normalize_expense(response.data[0]) if response.data else None
     else:
         expenses = _load_json()
         for i, expense in enumerate(expenses):
             if expense["id"] == expense_id:
                 expenses[i] = {**expense, **clean_data}
                 _save_json(expenses)
-                return expenses[i]
+                return _normalize_expense(expenses[i])
         return None
 
 
@@ -141,7 +174,7 @@ def get_expenses_by_month(year: int, month: int) -> List[dict]:
             end_date = f"{year}-{month + 1:02d}-01"
         
         response = supabase.table("expenses").select("*").gte("date", start_date).lt("date", end_date).execute()
-        return response.data or []
+        return _normalize_expenses(response.data or [])
     else:
         expenses = _load_json()
         filtered = []
@@ -152,7 +185,7 @@ def get_expenses_by_month(year: int, month: int) -> List[dict]:
                     filtered.append(expense)
             except (ValueError, KeyError):
                 continue
-        return filtered
+        return _normalize_expenses(filtered)
 
 
 def get_all_months() -> List[str]:
@@ -450,9 +483,9 @@ def load_recurring_expenses() -> List[dict]:
     """Load all recurring expenses."""
     if USE_SUPABASE:
         response = supabase.table("recurring_expenses").select("*").execute()
-        return response.data or []
+        return _normalize_recurring_expenses(response.data or [])
     else:
-        return _load_recurring_json()
+        return _normalize_recurring_expenses(_load_recurring_json())
 
 
 def add_recurring_expense(recurring_data: dict) -> dict:
@@ -462,8 +495,10 @@ def add_recurring_expense(recurring_data: dict) -> dict:
         "is_active": True,
         "last_added": None,
         "created_at": datetime.now().isoformat(),
+        "payment_method": "debit",
         **recurring_data
     }
+    recurring["payment_method"] = _normalize_payment_method(recurring.get("payment_method"))
     
     if USE_SUPABASE:
         response = supabase.table("recurring_expenses").insert(recurring).execute()
@@ -479,29 +514,31 @@ def get_recurring_expense(recurring_id: str) -> Optional[dict]:
     """Get a single recurring expense by ID."""
     if USE_SUPABASE:
         response = supabase.table("recurring_expenses").select("*").eq("id", recurring_id).execute()
-        return response.data[0] if response.data else None
+        return _normalize_recurring_expense(response.data[0]) if response.data else None
     else:
         items = _load_recurring_json()
         for item in items:
             if item["id"] == recurring_id:
-                return item
+                return _normalize_recurring_expense(item)
         return None
 
 
 def update_recurring_expense(recurring_id: str, update_data: dict) -> Optional[dict]:
     """Update a recurring expense."""
     clean_data = {k: v for k, v in update_data.items() if v is not None}
+    if "payment_method" in clean_data:
+        clean_data["payment_method"] = _normalize_payment_method(clean_data["payment_method"])
     
     if USE_SUPABASE:
         response = supabase.table("recurring_expenses").update(clean_data).eq("id", recurring_id).execute()
-        return response.data[0] if response.data else None
+        return _normalize_recurring_expense(response.data[0]) if response.data else None
     else:
         items = _load_recurring_json()
         for i, item in enumerate(items):
             if item["id"] == recurring_id:
                 items[i] = {**item, **clean_data}
                 _save_recurring_json(items)
-                return items[i]
+                return _normalize_recurring_expense(items[i])
         return None
 
 
@@ -547,6 +584,7 @@ def process_recurring_expenses() -> List[dict]:
                 "description": item["description"],
                 "amount": item["amount"],
                 "category": item["category"],
+                "payment_method": _normalize_payment_method(item.get("payment_method")),
                 "date": f"{today.year}-{today.month:02d}-{day_of_month:02d}"
             }
             

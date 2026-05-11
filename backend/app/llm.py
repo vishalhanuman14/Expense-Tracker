@@ -23,6 +23,51 @@ CATEGORIES = [
     "Other"                # Miscellaneous
 ]
 
+PAYMENT_METHODS = ["debit", "credit"]
+
+
+def detect_payment_method(raw_input: str, parsed_method: str = None) -> str:
+    """Infer credit/debit from user wording, defaulting to debit."""
+    normalized = (parsed_method or "").strip().lower()
+
+    text = raw_input.lower()
+
+    credit_patterns = [
+        r"\bcredit\b",
+        r"\bcredt\b",
+        r"\bcreit\b",
+        r"\bcc\b",
+        r"\bcredit\s*card\b",
+        r"\bvisa\b",
+        r"\bmastercard\b",
+        r"\bamex\b",
+        r"\bamerican\s+express\b",
+        r"\bdiscover\b",
+        r"\bcapital\s+one\b",
+        r"\bchase\s+(freedom|sapphire|card)\b",
+        r"\bapple\s+card\b",
+    ]
+    debit_patterns = [
+        r"\bdebit\b",
+        r"\bbank\b",
+        r"\bchecking\b",
+        r"\bcheckings\b",
+        r"\bcash\b",
+        r"\bdebit\s*card\b",
+    ]
+
+    has_credit_hint = any(re.search(pattern, text) for pattern in credit_patterns)
+    has_debit_hint = any(re.search(pattern, text) for pattern in debit_patterns)
+
+    if has_credit_hint and not has_debit_hint:
+        return "credit"
+    if has_debit_hint and not has_credit_hint:
+        return "debit"
+    if normalized in PAYMENT_METHODS:
+        return normalized
+
+    return "debit"
+
 
 def parse_expense_with_llm(raw_input: str, api_key: str) -> dict:
     """Use OpenAI to parse raw expense input and categorize it."""
@@ -49,12 +94,13 @@ Return these fields:
 - description: Clean, properly formatted description. Fix any typos, capitalize properly (e.g., "doordash chiken" → "DoorDash Chicken", "starbuks coffe" → "Starbucks Coffee")
 - amount: Number only (no $ symbol)
 - category: One of: {', '.join(CATEGORIES)}
+- payment_method: Either "debit" or "credit". Use "credit" when the input mentions credit, credit card, cc, Visa, Mastercard, Amex, Discover, Apple Card, Chase card, Capital One, or a similar credit-card phrase. Use "debit" when it mentions debit, bank, checking, cash, or no payment method.
 - date: YYYY-MM-DD format
 
 Raw input: "{raw_input}"
 
 Return ONLY valid JSON. Example:
-{{"description": "Rent payment", "amount": 100.00, "category": "Rent & Housing", "date": "{current_year}-01-10"}}"""
+{{"description": "Rent payment", "amount": 100.00, "category": "Rent & Housing", "payment_method": "debit", "date": "{current_year}-01-10"}}"""
 
     response = client.chat.completions.create(
         model="gpt-4.1-nano",
@@ -81,6 +127,7 @@ Return ONLY valid JSON. Example:
             "description": str(parsed.get("description", raw_input)),
             "amount": float(parsed.get("amount", 0)),
             "category": parsed.get("category", "Other") if parsed.get("category") in CATEGORIES else "Other",
+            "payment_method": detect_payment_method(raw_input, parsed.get("payment_method")),
             "date": parsed.get("date", today)
         }
     except json.JSONDecodeError:
@@ -92,6 +139,7 @@ Return ONLY valid JSON. Example:
             "description": raw_input,
             "amount": amount,
             "category": "Other",
+            "payment_method": detect_payment_method(raw_input),
             "date": today
         }
 

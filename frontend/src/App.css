@@ -190,7 +190,7 @@
 /* Balance Summary */
 .balance-summary {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 1rem;
 }
 
@@ -223,6 +223,10 @@
 
 .balance-value.expense {
   color: #ef4444;
+}
+
+.balance-value.credit {
+  color: #60a5fa;
 }
 
 .balance-value.positive {
@@ -489,5 +493,11 @@
   
   .category-filter {
     width: 100%;
+  }
+}
+
+@media (max-width: 1024px) and (min-width: 769px) {
+  .balance-summary {
+    grid-template-columns: repeat(2, 1fr);
   }
 }

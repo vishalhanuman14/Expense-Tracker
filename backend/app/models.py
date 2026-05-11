@@ -13,6 +13,7 @@ class Expense(BaseModel):
     description: str
     amount: float
     category: str
+    payment_method: str = "debit"
     date: str
     created_at: str
 
@@ -21,6 +22,7 @@ class ExpenseUpdate(BaseModel):
     description: Optional[str] = None
     amount: Optional[float] = None
     category: Optional[str] = None
+    payment_method: Optional[str] = None
     date: Optional[str] = None
 
 
@@ -89,6 +91,7 @@ class RecurringExpenseCreate(BaseModel):
     description: str
     amount: float
     category: str
+    payment_method: str = "debit"
     day_of_month: int  # 1-28 to avoid month-end issues
 
 
@@ -97,6 +100,7 @@ class RecurringExpense(BaseModel):
     description: str
     amount: float
     category: str
+    payment_method: str = "debit"
     day_of_month: int
     is_active: bool
     last_added: Optional[str] = None
@@ -107,5 +111,6 @@ class RecurringExpenseUpdate(BaseModel):
     description: Optional[str] = None
     amount: Optional[float] = None
     category: Optional[str] = None
+    payment_method: Optional[str] = None
     day_of_month: Optional[int] = None
     is_active: Optional[bool] = None

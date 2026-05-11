@@ -10,6 +10,7 @@ A simple expense tracker that uses AI to automatically categorize your spending.
 - **Typo Correction** - AI fixes spelling mistakes
 - **Income Tracking** - Track money coming in (paychecks, freelance, etc.)
 - **Net Balance** - See income vs expenses at a glance
+- **Credit vs Debit Tracking** - Mark expenses as credit card or debit/bank, with bank and net balances
 - **Monthly Budgets** - Set spending limits per category with progress bars
 - **Recurring Expenses** - Auto-add monthly bills (rent, subscriptions, etc.)
 - **Search & Filter** - Find expenses by description or category
@@ -72,9 +73,9 @@ Go to http://localhost:5173
 | Input | Result |
 |-------|--------|
 | `chipotle $14` | Chipotle - Food & Dining - $14.00 |
-| `uber to campus $8` | Uber to Campus - Transportation - $8.00 |
+| `uber to campus $8 on credit` | Uber to Campus - Transportation - $8.00 - Credit Card |
 | `rent $850 on jan 1` | Rent - Rent & Housing - $850.00 |
-| `starbuks cofee $6` | Starbucks Coffee - Food & Dining - $6.00 |
+| `starbuks cofee $6 debit` | Starbucks Coffee - Food & Dining - $6.00 - Debit/Bank |
 
 ### Income
 | Input | Result |
@@ -84,6 +85,8 @@ Go to http://localhost:5173
 | `freelance project $150` | Freelance Project - Freelance - $150.00 |
 
 The AI fixes typos, picks categories, and parses dates automatically.
+
+If no payment method is mentioned, expenses default to debit/bank. Mention words like `credit`, `cc`, `Visa`, `Amex`, or `Apple Card` to mark an expense as credit card spending.
 
 ---
 
@@ -134,6 +137,7 @@ CREATE TABLE expenses (
   description TEXT NOT NULL,
   amount DECIMAL(10,2) NOT NULL,
   category TEXT NOT NULL,
+  payment_method TEXT NOT NULL DEFAULT 'debit' CHECK (payment_method IN ('debit', 'credit')),
   date DATE NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -163,6 +167,7 @@ CREATE TABLE recurring_expenses (
   description TEXT NOT NULL,
   amount DECIMAL(10,2) NOT NULL,
   category TEXT NOT NULL,
+  payment_method TEXT NOT NULL DEFAULT 'debit' CHECK (payment_method IN ('debit', 'credit')),
   day_of_month INTEGER NOT NULL CHECK (day_of_month >= 1 AND day_of_month <= 28),
   is_active BOOLEAN DEFAULT true,
   last_added TEXT,
@@ -187,6 +192,18 @@ CREATE POLICY "Allow all operations on recurring_expenses" ON recurring_expenses
 ```
 
 4. Copy your Project URL and anon key from Settings > API
+
+If you already deployed before credit/debit support was added, run:
+
+```sql
+ALTER TABLE expenses
+ADD COLUMN IF NOT EXISTS payment_method TEXT NOT NULL DEFAULT 'debit'
+CHECK (payment_method IN ('debit', 'credit'));
+
+ALTER TABLE recurring_expenses
+ADD COLUMN IF NOT EXISTS payment_method TEXT NOT NULL DEFAULT 'debit'
+CHECK (payment_method IN ('debit', 'credit'));
+```
 
 ### 2. Deploy Backend (Render)
 1. Create account at render.com

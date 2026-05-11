@@ -21,7 +21,8 @@ function ExpenseInput({ onAdd, isLoading, placeholder, isIncome = false }) {
       if (isIncome) {
         setSuccess(`Added: ${result.income.description} - $${result.income.amount} (${result.income.source})`)
       } else {
-        setSuccess(`Added: ${result.expense.description} - $${result.expense.amount} (${result.expense.category})`)
+        const paymentMethod = result.expense.payment_method === 'credit' ? 'Credit Card' : 'Debit/Bank'
+        setSuccess(`Added: ${result.expense.description} - $${result.expense.amount} (${result.expense.category}, ${paymentMethod})`)
       }
       setTimeout(() => setSuccess(''), 4000)
     } else {
@@ -30,10 +31,10 @@ function ExpenseInput({ onAdd, isLoading, placeholder, isIncome = false }) {
   }
 
   const expenseExamples = [
-    'rent $850',
-    'uber to campus $8',
-    'chipotle $14',
-    'beer at bar $25',
+    'rent $850 debit',
+    'uber to campus $8 on credit',
+    'chipotle $14 bank',
+    'beer at bar $25 cc',
   ]
 
   const incomeExamples = [

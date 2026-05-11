@@ -104,6 +104,14 @@
   color: var(--accent-primary);
 }
 
+.card-value.debit-value {
+  color: #22c55e;
+}
+
+.card-value.credit-value {
+  color: #60a5fa;
+}
+
 .card-subtitle {
   font-size: 0.85rem;
   color: var(--text-secondary);
@@ -204,6 +212,14 @@
   font-weight: 600;
   font-family: var(--font-mono);
   color: var(--accent-primary);
+}
+
+.tooltip-value.debit-tooltip {
+  color: #22c55e;
+}
+
+.tooltip-value.credit-tooltip {
+  color: #60a5fa;
 }
 
 .tooltip-subtitle {
